@@ -1,6 +1,14 @@
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 
-type LandingOrderStatus = "NEW" | "PREPARING" | "READY" | "COMPLETED";
+export const dynamic = "force-dynamic";
+
+type LandingOrderStatus =
+  | "NEW"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
+  | "CANCELLED";
 type LandingOrderType = "PICKUP" | "DELIVERY";
 
 type QuickAction = {
@@ -16,12 +24,33 @@ type StatCard = {
   change: string;
 };
 
+type OrderItemRow = {
+  name: string;
+  qty: number;
+};
+
+type DashboardOrder = {
+  id: number;
+  created_at: string;
+  name: string;
+  type: LandingOrderType;
+  total: number | string | null;
+  status: LandingOrderStatus;
+  order_items: OrderItemRow[];
+};
+
 type RecentOrder = {
   id: string;
   customerName: string;
   orderType: LandingOrderType;
   amount: string;
   status: LandingOrderStatus;
+};
+
+type PopularPick = {
+  name: string;
+  amount: string;
+  progress: string;
 };
 
 const quickActions: QuickAction[] = [
@@ -38,72 +67,28 @@ const quickActions: QuickAction[] = [
     icon: "📦",
   },
   {
-    title: "Reports",
-    description: "Review sales snapshots and daily performance.",
-    href: "/reports",
-    icon: "📊",
-  },
-  {
-    title: "Settings",
-    description: "Manage products, team preferences, and workflows.",
-    href: "/settings",
-    icon: "⚙️",
+    title: "Pick List",
+    description: "See what the kitchen and packing team should prep next.",
+    href: "/pick-list",
+    icon: "🧺",
   },
 ];
 
-const statsCards: StatCard[] = [
+const EMPTY_STATS: StatCard[] = [
   {
     label: "Orders Today",
-    value: "128",
-    change: "+12% vs yesterday",
+    value: "0",
+    change: "No orders yet today",
   },
   {
     label: "Revenue Today",
-    value: "₹18,450",
-    change: "+8.4% vs yesterday",
+    value: "₹0",
+    change: "Waiting for the first sale",
   },
   {
     label: "Active Orders",
-    value: "17",
-    change: "6 ready for pickup",
-  },
-];
-
-const recentOrders: RecentOrder[] = [
-  {
-    id: "#2041",
-    customerName: "Nitya Live",
-    orderType: "DELIVERY",
-    amount: "₹650",
-    status: "NEW",
-  },
-  {
-    id: "#2040",
-    customerName: "Khushi Shah",
-    orderType: "PICKUP",
-    amount: "₹325",
-    status: "PREPARING",
-  },
-  {
-    id: "#2039",
-    customerName: "Milan Foods",
-    orderType: "DELIVERY",
-    amount: "₹1,120",
-    status: "READY",
-  },
-  {
-    id: "#2038",
-    customerName: "Riddhi Traders",
-    orderType: "PICKUP",
-    amount: "₹480",
-    status: "COMPLETED",
-  },
-  {
-    id: "#2037",
-    customerName: "Urban Spice",
-    orderType: "DELIVERY",
-    amount: "₹900",
-    status: "PREPARING",
+    value: "0",
+    change: "Queue is currently clear",
   },
 ];
 
@@ -117,9 +102,142 @@ function getStatusStyles(status: LandingOrderStatus): string {
       return "border border-purple-200 bg-purple-100 text-purple-700";
     case "COMPLETED":
       return "border border-green-200 bg-green-100 text-green-700";
+    case "CANCELLED":
+      return "border border-red-200 bg-red-100 text-red-700";
     default:
       return "border border-gray-200 bg-gray-100 text-gray-700";
   }
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getDateKey(date: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
+}
+
+function parseItemName(rawName: string): { name: string; size: string | null } {
+  const match = rawName.match(/^(.*)\s+\(([^()]+)\)$/);
+
+  if (!match) {
+    return { name: rawName, size: null };
+  }
+
+  return {
+    name: match[1],
+    size: match[2],
+  };
+}
+
+function buildDashboardData(orders: DashboardOrder[]) {
+  const todayKey = getDateKey(new Date().toISOString());
+  const todayOrders = orders.filter((order) => getDateKey(order.created_at) === todayKey);
+  const activeOrders = orders.filter(
+    (order) => order.status === "NEW" || order.status === "PREPARING" || order.status === "READY"
+  );
+  const readyOrders = activeOrders.filter((order) => order.status === "READY").length;
+  const revenueToday = todayOrders.reduce(
+    (sum, order) => sum + Number(order.total ?? 0),
+    0
+  );
+
+  const statsCards: StatCard[] = [
+    {
+      label: "Orders Today",
+      value: String(todayOrders.length),
+      change:
+        todayOrders.length > 0
+          ? `${todayOrders.filter((order) => order.status === "READY").length} ready to hand off`
+          : "No orders yet today",
+    },
+    {
+      label: "Revenue Today",
+      value: formatCurrency(revenueToday),
+      change:
+        revenueToday > 0
+          ? `${todayOrders.length} orders billed today`
+          : "Waiting for the first sale",
+    },
+    {
+      label: "Active Orders",
+      value: String(activeOrders.length),
+      change:
+        activeOrders.length > 0
+          ? `${readyOrders} ready for pickup`
+          : "Queue is currently clear",
+    },
+  ];
+
+  const recentOrders: RecentOrder[] = orders.slice(0, 5).map((order) => ({
+    id: `#${order.id}`,
+    customerName: order.name,
+    orderType: order.type,
+    amount: formatCurrency(Number(order.total ?? 0)),
+    status: order.status,
+  }));
+
+  const itemTotals = new Map<string, number>();
+
+  for (const order of todayOrders) {
+    for (const item of order.order_items ?? []) {
+      const parsedItem = parseItemName(item.name);
+      const itemName = parsedItem.size
+        ? `${parsedItem.name} (${parsedItem.size})`
+        : parsedItem.name;
+
+      itemTotals.set(itemName, (itemTotals.get(itemName) ?? 0) + item.qty);
+    }
+  }
+
+  const topQty = Math.max(...itemTotals.values(), 0);
+  const popularPicks: PopularPick[] = Array.from(itemTotals.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, qty]) => ({
+      name,
+      amount: `${qty} packed today`,
+      progress: topQty > 0 ? `${Math.max(20, Math.round((qty / topQty) * 100))}%` : "0%",
+    }));
+
+  return {
+    statsCards,
+    recentOrders,
+    popularPicks,
+    queueCount: activeOrders.length,
+  };
+}
+
+async function getDashboardOrders(): Promise<DashboardOrder[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return [];
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, created_at, name, type, total, status, order_items(name, qty)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("Dashboard fetch error:", error);
+    return [];
+  }
+
+  return (data ?? []) as DashboardOrder[];
 }
 
 function AppHeader() {
@@ -166,7 +284,13 @@ function AppHeader() {
   );
 }
 
-function Hero() {
+function Hero({
+  queueCount,
+  popularPicks,
+}: {
+  queueCount: number;
+  popularPicks: PopularPick[];
+}) {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
       <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:p-8">
@@ -217,16 +341,20 @@ function Hero() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-slate-900 p-4 text-white">
               <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-                Current Cart
+                Pick List
               </p>
-              <p className="mt-2 text-2xl font-semibold">₹1,145</p>
-              <p className="mt-1 text-sm text-slate-300">5 items selected</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {popularPicks.length}
+              </p>
+              <p className="mt-1 text-sm text-slate-300">popular items today</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
                 Queue
               </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">17</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {queueCount}
+              </p>
               <p className="mt-1 text-sm text-slate-500">orders in progress</p>
             </div>
           </div>
@@ -240,24 +368,26 @@ function Hero() {
             </div>
 
             <div className="space-y-3">
-              {[
-                { name: "Punjabi Mix", amount: "₹650", progress: "92%" },
-                { name: "Chundo", amount: "₹300", progress: "74%" },
-                { name: "Khati Gunda Keri", amount: "₹325", progress: "68%" },
-              ].map((item) => (
-                <div key={item.name}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{item.name}</span>
-                    <span className="text-slate-500">{item.amount}</span>
+              {popularPicks.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No items have been ordered yet today.
+                </p>
+              ) : (
+                popularPicks.map((item) => (
+                  <div key={item.name}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium text-slate-700">{item.name}</span>
+                      <span className="text-slate-500">{item.amount}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-amber-500"
+                        style={{ width: item.progress }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100">
-                    <div
-                      className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-amber-500"
-                      style={{ width: item.progress }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -278,7 +408,7 @@ function QuickActions() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {quickActions.map((action) => (
           <Link
             key={action.title}
@@ -307,7 +437,7 @@ function QuickActions() {
   );
 }
 
-function StatsCards() {
+function StatsCards({ statsCards }: { statsCards: StatCard[] }) {
   return (
     <section className="space-y-4">
       <div>
@@ -337,7 +467,7 @@ function StatsCards() {
   );
 }
 
-function RecentOrders() {
+function RecentOrders({ recentOrders }: { recentOrders: RecentOrder[] }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -364,66 +494,87 @@ function RecentOrders() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {recentOrders.map((order) => (
-            <div
-              key={order.id}
-              className="grid gap-4 px-4 py-4 sm:px-6 md:grid-cols-[1.4fr_1fr_0.9fr_1fr] md:items-center"
-            >
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  {order.customerName}
-                </p>
-                <p className="mt-1 text-xs text-slate-400">{order.id}</p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
-                  Order Type
-                </p>
-                <p className="text-sm text-slate-600">
-                  {order.orderType === "PICKUP" ? "Pickup" : "Delivery"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
-                  Amount
-                </p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {order.amount}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
-                  Status
-                </p>
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyles(
-                    order.status
-                  )}`}
-                >
-                  {order.status}
-                </span>
-              </div>
+          {recentOrders.length === 0 ? (
+            <div className="px-6 py-10 text-sm text-slate-500">
+              No orders have been placed yet.
             </div>
-          ))}
+          ) : (
+            recentOrders.map((order) => (
+              <div
+                key={order.id}
+                className="grid gap-4 px-4 py-4 sm:px-6 md:grid-cols-[1.4fr_1fr_0.9fr_1fr] md:items-center"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {order.customerName}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">{order.id}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
+                    Order Type
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {order.orderType === "PICKUP" ? "Pickup" : "Delivery"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
+                    Amount
+                  </p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {order.amount}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:hidden">
+                    Status
+                  </p>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyles(
+                      order.status
+                    )}`}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const orders = await getDashboardOrders();
+  const {
+    statsCards,
+    recentOrders,
+    popularPicks,
+    queueCount,
+  } = orders.length > 0
+    ? buildDashboardData(orders)
+    : {
+        statsCards: EMPTY_STATS,
+        recentOrders: [],
+        popularPicks: [],
+        queueCount: 0,
+      };
+
   return (
     <div className="min-h-dvh bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
       <AppHeader />
 
       <main className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <Hero />
-        <StatsCards />
+        <Hero queueCount={queueCount} popularPicks={popularPicks} />
+        <StatsCards statsCards={statsCards} />
         <QuickActions />
-        <RecentOrders />
+        <RecentOrders recentOrders={recentOrders} />
       </main>
     </div>
   );

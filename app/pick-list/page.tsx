@@ -1,20 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import Header from "@/components/Header";
 
-type OrderStatus = "NEW" | "PREPARING" | "READY" | "COMPLETED";
-type OrderItem = {
+type OrderStatus = "NEW" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
+
+type OrderItemRow = {
+  id: number;
   name: string;
-  size: string;
   qty: number;
+  packed: boolean;
 };
 
 type Order = {
   id: number;
   status: OrderStatus;
-  items: OrderItem[];
+  order_items: OrderItemRow[];
 };
 
 type PickListItem = {
@@ -22,6 +24,7 @@ type PickListItem = {
   name: string;
   size: string;
   qty: number;
+  itemIds: number[];
 };
 
 type PickListSummary = {
@@ -29,46 +32,18 @@ type PickListSummary = {
   totalItems: number;
 };
 
-const MOCK_ORDERS: Order[] = [
-  {
-    id: 201,
-    status: "NEW",
-    items: [
-      { name: "Punjabi Mix", size: "250g", qty: 2 },
-      { name: "Chundo", size: "500g", qty: 1 },
-    ],
-  },
-  {
-    id: 202,
-    status: "PREPARING",
-    items: [
-      { name: "Punjabi Mix", size: "250g", qty: 1 },
-      { name: "Khati Gunda Keri", size: "1kg", qty: 3 },
-    ],
-  },
-  {
-    id: 203,
-    status: "READY",
-    items: [
-      { name: "Chundo", size: "250g", qty: 2 },
-    ],
-  },
-  {
-    id: 204,
-    status: "NEW",
-    items: [
-      { name: "Khati Gunda Keri", size: "1kg", qty: 2 },
-      { name: "Punjabi Mix", size: "500g", qty: 4 },
-    ],
-  },
-  {
-    id: 205,
-    status: "COMPLETED",
-    items: [
-      { name: "Punjabi Mix", size: "250g", qty: 1 },
-    ],
-  },
-];
+function parseItemName(rawName: string): { name: string; size: string } {
+  const match = rawName.match(/^(.*)\s+\(([^()]+)\)$/);
+
+  if (!match) {
+    return { name: rawName, size: "Standard" };
+  }
+
+  return {
+    name: match[1],
+    size: match[2],
+  };
+}
 
 function aggregatePickList(orders: Order[]): {
   summary: PickListSummary;
@@ -82,20 +57,28 @@ function aggregatePickList(orders: Order[]): {
   let totalItems = 0;
 
   for (const order of activeOrders) {
-    for (const item of order.items) {
-      const key = `${item.name}__${item.size}`;
+    for (const item of order.order_items ?? []) {
+      if (item.packed) {
+        continue;
+      }
+
+      const parsedItem = parseItemName(item.name);
+      const key = `${parsedItem.name}__${parsedItem.size}`;
+
       totalItems += item.qty;
 
       const existingItem = groupedItems.get(key);
 
       if (existingItem) {
         existingItem.qty += item.qty;
+        existingItem.itemIds.push(item.id);
       } else {
         groupedItems.set(key, {
           key,
-          name: item.name,
-          size: item.size,
+          name: parsedItem.name,
+          size: parsedItem.size,
           qty: item.qty,
+          itemIds: [item.id],
         });
       }
     }
@@ -122,58 +105,15 @@ function getQuantityStyles(qty: number): string {
   return "border border-emerald-200 bg-emerald-50 text-emerald-700";
 }
 
-function PickListHeader() {
-  const pathname = usePathname();
-
-  const navLinkClass = (path: string) =>
-    `rounded-full px-4 py-2 text-sm font-medium transition ${
-      pathname === path
-        ? "bg-slate-900 text-white shadow-sm"
-        : "text-slate-600 hover:bg-white hover:text-slate-900"
-    }`;
-
-  return (
-    <header className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-600">
-              Awesome Achaar POS
-            </p>
-            <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
-              Pick List
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">Items to pack</p>
-          </div>
-
-          <Link
-            href="/"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            <span aria-hidden="true">←</span>
-            <span>Home</span>
-          </Link>
-        </div>
-
-        <nav className="flex flex-wrap items-center gap-2 rounded-[24px] bg-slate-100 p-1">
-          <Link href="/pos" className={navLinkClass("/pos")}>
-            POS
-          </Link>
-
-          <Link href="/orders" className={navLinkClass("/orders")}>
-            Orders
-          </Link>
-
-          <Link href="/pick-list" className={navLinkClass("/pick-list")}>
-            Pick List
-          </Link>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-function SummaryCard({ label, value, tone }: { label: string; value: number; tone: "dark" | "light" }) {
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "dark" | "light";
+}) {
   return (
     <div
       className={`rounded-[24px] p-4 shadow-sm ${
@@ -196,32 +136,110 @@ function SummaryCard({ label, value, tone }: { label: string; value: number; ton
 
 export default function PickListPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [packedKeys, setPackedKeys] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [savingKeys, setSavingKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setOrders(MOCK_ORDERS);
-      setIsLoading(false);
-    }, 350);
+    let isMounted = true;
 
-    return () => window.clearTimeout(timer);
+    const fetchOrders = async () => {
+      setHasError(false);
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, status, order_items(id, name, qty, packed)")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Pick list fetch error:", error);
+        setHasError(true);
+        setIsLoading(false);
+        return;
+      }
+
+      setOrders((data ?? []) as Order[]);
+      setIsLoading(false);
+    };
+
+    void fetchOrders();
+
+    const ordersChannel = supabase
+      .channel("pick-list-orders")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => void fetchOrders()
+      )
+      .subscribe();
+
+    const itemsChannel = supabase
+      .channel("pick-list-items")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        () => void fetchOrders()
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(itemsChannel);
+    };
   }, []);
 
   const { summary, items } = aggregatePickList(orders);
-  const pickListItems = items.filter((item) => !packedKeys.includes(item.key));
+  const pickListItems = items;
 
-  const handleMarkPacked = (itemKey: string) => {
-    setPackedKeys((prev) => (prev.includes(itemKey) ? prev : [...prev, itemKey]));
+  const handleMarkPacked = async (item: PickListItem) => {
+    setSavingKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
+
+    const { error } = await supabase
+      .from("order_items")
+      .update({ packed: true })
+      .in("id", item.itemIds);
+
+    if (error) {
+      console.error("Mark packed error:", error);
+      setHasError(true);
+    }
+
+    setSavingKeys((prev) => prev.filter((key) => key !== item.key));
   };
 
-  const handleMarkAllPacked = () => {
-    setPackedKeys(pickListItems.map((item) => item.key));
+  const handleMarkAllPacked = async () => {
+    const itemIds = pickListItems.flatMap((item) => item.itemIds);
+
+    if (itemIds.length === 0) {
+      return;
+    }
+
+    setSavingKeys(pickListItems.map((item) => item.key));
+
+    const { error } = await supabase
+      .from("order_items")
+      .update({ packed: true })
+      .in("id", itemIds);
+
+    if (error) {
+      console.error("Mark all packed error:", error);
+      setHasError(true);
+    }
+
+    setSavingKeys([]);
   };
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
-      <PickListHeader />
+      <Header
+        title="Pick List"
+        subtitle="Items to pack from all new and preparing orders."
+      />
 
       <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5">
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.45)]">
@@ -239,11 +257,11 @@ export default function PickListPage() {
             </div>
 
             <button
-              onClick={handleMarkAllPacked}
-              disabled={pickListItems.length === 0 || isLoading}
+              onClick={() => void handleMarkAllPacked()}
+              disabled={pickListItems.length === 0 || isLoading || savingKeys.length > 0}
               className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mark All Packed
+              {savingKeys.length > 0 ? "Saving..." : "Mark All Packed"}
             </button>
           </div>
         </section>
@@ -273,6 +291,15 @@ export default function PickListPage() {
                 <div className="mt-4 h-12 rounded-2xl bg-slate-100" />
               </div>
             ))}
+          </section>
+        ) : hasError ? (
+          <section className="rounded-[28px] border border-dashed border-red-200 bg-white/80 px-6 py-12 text-center shadow-sm">
+            <p className="text-lg font-semibold text-slate-900">
+              Pick list unavailable
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              We couldn&apos;t load the live pick list from Supabase.
+            </p>
           </section>
         ) : pickListItems.length === 0 ? (
           <section className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center shadow-sm">
@@ -316,10 +343,11 @@ export default function PickListPage() {
                 </div>
 
                 <button
-                  onClick={() => handleMarkPacked(item.key)}
-                  className="mt-5 w-full rounded-2xl bg-slate-900 py-4 text-base font-semibold text-white transition hover:bg-slate-800"
+                  onClick={() => void handleMarkPacked(item)}
+                  disabled={savingKeys.includes(item.key)}
+                  className="mt-5 w-full rounded-2xl bg-slate-900 py-4 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Mark Packed
+                  {savingKeys.includes(item.key) ? "Saving..." : "Mark Packed"}
                 </button>
               </article>
             ))}
