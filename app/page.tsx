@@ -125,7 +125,7 @@ function getStatusStyles(status: LandingOrderStatus): string {
 function AppHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-600">
             Dashboard
@@ -135,7 +135,7 @@ function AppHeader() {
           </h1>
         </div>
 
-        <nav className="hidden items-center gap-2 rounded-full bg-slate-100 p-1 sm:flex">
+        <nav className="flex flex-wrap items-center gap-2 rounded-[24px] bg-slate-100 p-1">
           <Link
             href="/"
             className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm"
@@ -144,15 +144,21 @@ function AppHeader() {
           </Link>
           <Link
             href="/pos"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
           >
             POS
           </Link>
           <Link
             href="/orders"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
           >
             Orders
+          </Link>
+          <Link
+            href="/pick-list"
+            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+          >
+            Pick List
           </Link>
         </nav>
       </div>

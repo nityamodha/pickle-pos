@@ -41,13 +41,17 @@ export default function Header({ title, subtitle }: HeaderProps) {
           </Link>
         </div>
 
-        <nav className="flex items-center gap-2 rounded-full bg-slate-100 p-1">
+        <nav className="flex flex-wrap items-center gap-2 rounded-[24px] bg-slate-100 p-1">
           <Link href="/pos" className={linkClass("/pos")}>
             POS
           </Link>
 
           <Link href="/orders" className={linkClass("/orders")}>
             Orders
+          </Link>
+
+          <Link href="/pick-list" className={linkClass("/pick-list")}>
+            Pick List
           </Link>
         </nav>
       </div>
