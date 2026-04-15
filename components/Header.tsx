@@ -50,6 +50,10 @@ export default function Header({ title, subtitle }: HeaderProps) {
             Orders
           </Link>
 
+          <Link href="/finance" className={linkClass("/finance")}>
+            Finance
+          </Link>
+
           <Link href="/pick-list" className={linkClass("/pick-list")}>
             Pick List
           </Link>

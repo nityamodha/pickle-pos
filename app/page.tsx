@@ -73,6 +73,12 @@ const quickActions: QuickAction[] = [
     href: "/pick-list",
     icon: "🧺",
   },
+  {
+    title: "Finance Dashboard",
+    description: "Close ready orders and record how much was received and by whom.",
+    href: "/finance",
+    icon: "💸",
+  },
 ];
 
 function formatCurrency(value: number): string {
@@ -235,6 +241,12 @@ function AppHeader() {
             className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
           >
             Orders
+          </Link>
+          <Link
+            href="/finance"
+            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+          >
+            Finance
           </Link>
           <Link
             href="/pick-list"

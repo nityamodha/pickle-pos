@@ -28,6 +28,8 @@ type OrderCardProps = {
   onPrevStatus: (order: OrderCardData) => void;
   onNextStatus: (order: OrderCardData) => void;
   onCancel: (order: OrderCardData) => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
 };
 
 export default function OrderCard({
@@ -35,6 +37,8 @@ export default function OrderCard({
   onPrevStatus,
   onNextStatus,
   onCancel,
+  nextLabel = "Next →",
+  nextDisabled = false,
 }: OrderCardProps) {
   const statusClassName = getStatusStyles(order.status);
   const statusIcon = getStatusIcon(order.status);
@@ -95,9 +99,14 @@ export default function OrderCard({
 
           <button
             onClick={() => onNextStatus(order)}
-            className="rounded-full bg-slate-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+            disabled={nextDisabled}
+            className={`rounded-full px-3 py-2 text-xs font-medium transition ${
+              nextDisabled
+                ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                : "bg-slate-900 text-white hover:bg-slate-800"
+            }`}
           >
-            Next →
+            {nextLabel}
           </button>
         </div>
 

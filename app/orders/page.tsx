@@ -13,7 +13,6 @@ const STATUS_FLOW: OrderStatus[] = [
   "NEW",
   "PREPARING",
   "READY",
-  "COMPLETED",
 ];
 
 const FILTER_OPTIONS: Array<"ALL" | OrderStatus> = [
@@ -116,6 +115,13 @@ export default function OrdersPage() {
         : STATUS_FLOW[index - 1];
 
     if (!nextStatus) {
+      if (direction === "NEXT" && order.status === "READY") {
+        pushToast(
+          "Ready for finance",
+          `Record payment for Order #${order.id} from the Finance dashboard before completing it.`,
+          "info"
+        );
+      }
       return;
     }
 
@@ -239,6 +245,10 @@ export default function OrdersPage() {
                 void updateStatus(currentOrder, "NEXT")
               }
               onCancel={(currentOrder) => void cancelOrder(currentOrder)}
+              nextLabel={
+                order.status === "READY" ? "Finance only" : "Next →"
+              }
+              nextDisabled={order.status === "READY"}
             />
           ))}
         </section>
