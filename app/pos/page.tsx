@@ -180,6 +180,9 @@ export default function POSPage() {
     );
   };
 
+  const getCartQty = (id: number) =>
+    cart.find((item) => item.id === id)?.qty ?? 0;
+
   const total = cart.reduce(
     (sum, item) => sum + item.unit_price * item.qty,
     0
@@ -266,7 +269,7 @@ export default function POSPage() {
         subtitle="Create fast pickup and delivery orders from one screen."
       />
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5 pb-44">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5 pb-[26rem]">
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.45)]">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -327,25 +330,70 @@ export default function POSPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  {product.variants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      onClick={() =>
-                        addToCart({
-                          id: variant.id,
-                          product_name: product.name,
-                          size: variant.size,
-                          unit_price: variant.price,
-                        })
-                      }
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition active:scale-95 hover:border-orange-200 hover:bg-orange-50"
-                    >
-                      <p className="text-xs font-medium text-slate-500">{variant.size}</p>
-                      <p className="mt-2 text-lg font-semibold text-slate-900">
-                        ₹{variant.price}
-                      </p>
-                    </button>
-                  ))}
+                  {product.variants.map((variant) => {
+                    const cartQty = getCartQty(variant.id);
+
+                    return (
+                      <div
+                        key={variant.id}
+                        className={`rounded-2xl border p-3 text-left transition ${
+                          cartQty > 0
+                            ? "border-orange-200 bg-orange-50 shadow-[0_12px_30px_-24px_rgba(234,88,12,0.65)]"
+                            : "border-slate-200 bg-slate-50 hover:border-orange-200 hover:bg-orange-50"
+                        }`}
+                      >
+                        <p className="text-xs font-medium text-slate-500">{variant.size}</p>
+                        <p className="mt-2 text-lg font-semibold text-slate-900">
+                          ₹{variant.price}
+                        </p>
+
+                        {cartQty > 0 ? (
+                          <div className="mt-4 flex items-center justify-between gap-2 rounded-full border border-white/75 bg-white/78 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_24px_-24px_rgba(15,23,42,0.28)] backdrop-blur-md">
+                            <button
+                              onClick={() => updateQty(variant.id, -1)}
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.9)_100%)] text-[1.45rem] font-semibold leading-none text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_-16px_rgba(15,23,42,0.28)] transition hover:border-slate-300 hover:text-slate-800"
+                              aria-label={`Decrease ${product.name} ${variant.size}`}
+                            >
+                              −
+                            </button>
+
+                            <span className="inline-flex min-w-[2.4rem] items-center justify-center rounded-full bg-slate-900 px-2.5 py-1 text-sm font-bold text-white shadow-[0_10px_18px_-16px_rgba(15,23,42,0.5)]">
+                              {cartQty}
+                            </span>
+
+                            <button
+                              onClick={() =>
+                                addToCart({
+                                  id: variant.id,
+                                  product_name: product.name,
+                                  size: variant.size,
+                                  unit_price: variant.price,
+                                })
+                              }
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-900/10 bg-[linear-gradient(180deg,rgba(30,41,59,0.92)_0%,rgba(15,23,42,0.98)_100%)] text-[1.45rem] font-semibold leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_18px_-16px_rgba(15,23,42,0.58)] transition hover:brightness-110"
+                              aria-label={`Increase ${product.name} ${variant.size}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              addToCart({
+                                id: variant.id,
+                                product_name: product.name,
+                                size: variant.size,
+                                unit_price: variant.price,
+                              })
+                            }
+                            className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-white/25 bg-[linear-gradient(180deg,rgba(30,41,59,0.88)_0%,rgba(15,23,42,0.96)_100%)] px-3 py-2 text-xs font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_16px_26px_-18px_rgba(15,23,42,0.8)] backdrop-blur-md transition active:scale-95 hover:brightness-110"
+                          >
+                            Add
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -354,7 +402,7 @@ export default function POSPage() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md px-4 pb-4">
-        <div className="rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)] backdrop-blur">
+        <div className="rounded-[30px] border border-white/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(255,255,255,0.7)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_30px_70px_-34px_rgba(15,23,42,0.55)] backdrop-blur-xl">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -365,7 +413,7 @@ export default function POSPage() {
             <button
               disabled={cart.length === 0}
               onClick={() => setShowCheckout(true)}
-              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[22px] border border-white/25 bg-[linear-gradient(180deg,rgba(30,41,59,0.88)_0%,rgba(15,23,42,0.98)_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_18px_34px_-20px_rgba(15,23,42,0.85)] backdrop-blur-md transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Checkout
             </button>
@@ -376,7 +424,7 @@ export default function POSPage() {
               {cart.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-[24px] border border-white/70 bg-white/55 p-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_16px_30px_-26px_rgba(15,23,42,0.45)] backdrop-blur-md"
                 >
                   <div className="min-w-0 flex-1 break-words">
                     <p className="font-medium text-slate-800">
@@ -387,21 +435,21 @@ export default function POSPage() {
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200/80 bg-white/82 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_24px_-24px_rgba(15,23,42,0.28)] backdrop-blur-md">
                     <button
                       onClick={() => updateQty(item.id, -1)}
-                      className="rounded-full bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.9)_100%)] text-[1.7rem] font-semibold leading-none text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_-16px_rgba(15,23,42,0.3)] transition hover:border-slate-300 hover:text-slate-800"
                     >
                       −
                     </button>
 
-                    <span className="min-w-4 text-center font-semibold text-slate-900">
+                    <span className="inline-flex min-w-[2.75rem] items-center justify-center rounded-full bg-slate-900 px-3 py-1.5 text-base font-bold text-white shadow-[0_10px_20px_-16px_rgba(15,23,42,0.5)]">
                       {item.qty}
                     </span>
 
                     <button
                       onClick={() => updateQty(item.id, 1)}
-                      className="rounded-full bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm"
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-900/10 bg-[linear-gradient(180deg,rgba(30,41,59,0.92)_0%,rgba(15,23,42,0.98)_100%)] text-[1.7rem] font-semibold leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_20px_-16px_rgba(15,23,42,0.58)] transition hover:brightness-110"
                     >
                       +
                     </button>
@@ -422,7 +470,7 @@ export default function POSPage() {
 
       {showCheckout && (
         <div className="fixed inset-0 z-30 flex items-end bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-sm">
-          <div className="mx-auto w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)]">
+          <div className="mx-auto w-full max-w-md rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.76)_100%)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_30px_70px_-34px_rgba(15,23,42,0.5)] backdrop-blur-xl">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
                 Checkout
@@ -437,7 +485,7 @@ export default function POSPage() {
                 onClick={() => setOrderType("PICKUP")}
                 className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
                   orderType === "PICKUP"
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "border border-white/85 bg-white/85 text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-md"
                     : "text-slate-500"
                 }`}
               >
@@ -448,7 +496,7 @@ export default function POSPage() {
                 onClick={() => setOrderType("DELIVERY")}
                 className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
                   orderType === "DELIVERY"
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "border border-white/85 bg-white/85 text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-md"
                     : "text-slate-500"
                 }`}
               >
@@ -482,14 +530,14 @@ export default function POSPage() {
             <button
               onClick={() => void placeOrder()}
               disabled={isPlacingOrder}
-              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-[22px] border border-white/25 bg-[linear-gradient(180deg,rgba(30,41,59,0.88)_0%,rgba(15,23,42,0.98)_100%)] py-3 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_18px_34px_-20px_rgba(15,23,42,0.85)] backdrop-blur-md transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPlacingOrder ? "Placing Order..." : `Place Order ₹${total}`}
             </button>
 
             <button
               onClick={() => setShowCheckout(false)}
-              className="mt-3 w-full text-sm font-medium text-slate-500 transition hover:text-slate-700"
+              className="mt-3 w-full rounded-[22px] border border-white/75 bg-white/55 py-3 text-sm font-medium text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_26px_-22px_rgba(15,23,42,0.45)] backdrop-blur-md transition hover:bg-white/72 hover:text-slate-800"
             >
               Cancel
             </button>
