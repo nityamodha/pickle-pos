@@ -150,99 +150,174 @@ export default function POSPage() {
   };
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-x-hidden bg-gray-50">
+    <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
 
       {/* 🔥 NAVIGATION */}
-      <Header />
+      <Header
+        title="POS Counter"
+        subtitle="Create fast pickup and delivery orders from one screen."
+      />
 
-      {/* PRODUCTS */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-3 pb-40">
-        {PRODUCTS.map((product, index) => (
-          <div key={index} className="bg-white rounded-xl p-3 shadow-sm">
-            <h2 className="font-semibold mb-2">{product.name}</h2>
-
-            <div className="grid grid-cols-3 gap-2">
-              {product.variants.map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() =>
-                    addToCart({
-                      id: v.id,
-                      name: product.name,
-                      size: v.size,
-                      price: v.price,
-                    })
-                  }
-                  className="rounded-lg bg-gray-100 p-3 active:scale-95"
-                >
-                  <p className="text-xs">{v.size}</p>
-                  <p className="text-sm font-semibold">₹{v.price}</p>
-                </button>
-              ))}
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5 pb-44">
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.45)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+                Counter Overview
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                Build the next order
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Tap any size below to add products instantly to the active cart.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-900 px-3 py-2 text-right text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+                Cart
+              </p>
+              <p className="text-lg font-semibold">{cart.length}</p>
             </div>
           </div>
-        ))}
+        </section>
+
+        <section className="space-y-4">
+          {PRODUCTS.map((product, index) => (
+            <div
+              key={index}
+              className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
+                    Product
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                    {product.name}
+                  </h2>
+                </div>
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  3 sizes
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {product.variants.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() =>
+                      addToCart({
+                        id: v.id,
+                        name: product.name,
+                        size: v.size,
+                        price: v.price,
+                      })
+                    }
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition active:scale-95 hover:border-orange-200 hover:bg-orange-50"
+                  >
+                    <p className="text-xs font-medium text-slate-500">{v.size}</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">
+                      ₹{v.price}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
       </div>
 
       {/* 🛒 CART */}
-      <div className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md border-t bg-white p-3">
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md px-4 pb-4">
+        <div className="rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)] backdrop-blur">
 
-        {cart.length > 0 && (
-          <div className="max-h-32 overflow-y-auto mb-2">
-            {cart.map((item) => (
-              <div key={item.id} className="mb-1 flex items-center justify-between gap-3 text-sm">
-                <div className="min-w-0 flex-1 break-words">
-                  {item.name} ({item.size})
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() => updateQty(item.id, -1)}
-                    className="bg-gray-200 px-2 rounded"
-                  >
-                    −
-                  </button>
-
-                  <span>{item.qty}</span>
-
-                  <button
-                    onClick={() => updateQty(item.id, 1)}
-                    className="bg-gray-200 px-2 rounded"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Active Cart
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">₹{total}</p>
+            </div>
+            <button
+              disabled={cart.length === 0}
+              onClick={() => setShowCheckout(true)}
+              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Checkout
+            </button>
           </div>
-        )}
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-bold">₹{total}</p>
+          {cart.length > 0 ? (
+            <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
+              {cart.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 text-sm"
+                >
+                  <div className="min-w-0 flex-1 break-words">
+                    <p className="font-medium text-slate-800">
+                      {item.name} ({item.size})
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      ₹{item.price} each
+                    </p>
+                  </div>
 
-          <button
-            disabled={cart.length === 0}
-            onClick={() => setShowCheckout(true)}
-            className="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-50"
-          >
-            Checkout
-          </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => updateQty(item.id, -1)}
+                      className="rounded-full bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm"
+                    >
+                      −
+                    </button>
+
+                    <span className="min-w-4 text-center font-semibold text-slate-900">
+                      {item.qty}
+                    </span>
+
+                    <button
+                      onClick={() => updateQty(item.id, 1)}
+                      className="rounded-full bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center">
+              <p className="text-sm font-medium text-slate-700">Cart is empty</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Add products above to start a new order.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* 🧾 CHECKOUT */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/30 flex items-end">
-          <div className="mx-auto w-full max-w-md rounded-t-2xl bg-white p-4">
+        <div className="fixed inset-0 z-30 flex items-end bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)]">
 
-            <h2 className="font-bold mb-3">Checkout</h2>
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+                Checkout
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                Complete order details
+              </h2>
+            </div>
 
             {/* ORDER TYPE */}
-            <div className="flex gap-2 mb-3">
+            <div className="mb-4 flex gap-2 rounded-full bg-slate-100 p-1">
               <button
                 onClick={() => setOrderType("PICKUP")}
-                className={`flex-1 p-2 rounded-lg border ${
-                  orderType === "PICKUP" ? "bg-black text-white" : ""
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  orderType === "PICKUP"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500"
                 }`}
               >
                 Pickup
@@ -250,8 +325,10 @@ export default function POSPage() {
 
               <button
                 onClick={() => setOrderType("DELIVERY")}
-                className={`flex-1 p-2 rounded-lg border ${
-                  orderType === "DELIVERY" ? "bg-black text-white" : ""
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  orderType === "DELIVERY"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500"
                 }`}
               >
                 Delivery
@@ -260,14 +337,14 @@ export default function POSPage() {
 
             <input
               placeholder="Name"
-              className="w-full border p-2 mb-2 rounded"
+              className="mb-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
 
             <input
               placeholder="Phone"
-              className="w-full border p-2 mb-2 rounded"
+              className="mb-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
@@ -275,7 +352,7 @@ export default function POSPage() {
             {orderType === "DELIVERY" && (
               <textarea
                 placeholder="Address"
-                className="w-full border p-2 mb-2 rounded"
+                className="mb-3 min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
@@ -283,14 +360,14 @@ export default function POSPage() {
 
             <button
               onClick={placeOrder}
-              className="w-full bg-black text-white py-3 rounded-xl"
+              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               Place Order ₹{total}
             </button>
 
             <button
               onClick={() => setShowCheckout(false)}
-              className="w-full mt-2 text-gray-500"
+              className="mt-3 w-full text-sm font-medium text-slate-500 transition hover:text-slate-700"
             >
               Cancel
             </button>

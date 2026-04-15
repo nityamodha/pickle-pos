@@ -38,13 +38,13 @@ export default function OrderCard({
   const statusLabel = getStatusLabel(order.status);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-start justify-between gap-3">
+    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">
+          <p className="text-sm font-semibold text-slate-900">
             #{order.id} • {order.name}
           </p>
-          <p className="text-xs text-gray-400">{order.phone}</p>
+          <p className="mt-1 text-xs text-slate-400">{order.phone}</p>
         </div>
 
         <span
@@ -58,31 +58,36 @@ export default function OrderCard({
         </span>
       </div>
 
-      <p className="mb-2 break-words text-xs text-gray-500">
+      <p className="mb-3 break-words text-xs text-slate-500">
         {order.type === "DELIVERY" ? "🚚 Delivery" : "🛍 Pickup"}
         {order.address && ` • ${order.address}`}
       </p>
 
-      <div className="space-y-1 break-words text-sm">
+      <div className="rounded-2xl bg-slate-50 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          Items
+        </p>
+        <div className="space-y-1 break-words text-sm text-slate-700">
         {order.order_items?.map((item) => (
           <p key={item.id}>
             {item.qty}× {item.name}
           </p>
         ))}
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onPrevStatus(order)}
-            className="rounded-full bg-gray-200 px-3 py-1 text-xs"
+            className="rounded-full bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
           >
             ← Prev
           </button>
 
           <button
             onClick={() => onNextStatus(order)}
-            className="rounded-full bg-black px-3 py-1 text-xs text-white"
+            className="rounded-full bg-slate-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
           >
             Next →
           </button>
@@ -91,7 +96,7 @@ export default function OrderCard({
         {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
           <button
             onClick={() => onCancel(order)}
-            className="text-xs text-red-600"
+            className="text-xs font-medium text-red-600 transition hover:text-red-700"
           >
             Cancel
           </button>
@@ -100,4 +105,3 @@ export default function OrderCard({
     </div>
   );
 }
-
