@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import Header from "@/components/Header";
 
 /* ================= TYPES ================= */
 
@@ -46,7 +47,7 @@ const PRODUCTS = [
 
 /* ================= COMPONENT ================= */
 
-export default function POS() {
+export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
 
@@ -99,7 +100,7 @@ export default function POS() {
     0
   );
 
-  /* 📦 PLACE ORDER */
+  /* 📦 Place Order */
   const placeOrder = async () => {
     if (!name || !phone || cart.length === 0) {
       alert("Fill details");
@@ -107,7 +108,7 @@ export default function POS() {
     }
 
     if (orderType === "DELIVERY" && !address) {
-      alert("Enter delivery address");
+      alert("Enter address");
       return;
     }
 
@@ -127,7 +128,6 @@ export default function POS() {
       .single();
 
     if (error || !order) {
-      console.error(error);
       alert("Order failed");
       return;
     }
@@ -140,7 +140,7 @@ export default function POS() {
 
     await supabase.from("order_items").insert(items);
 
-    // Reset
+    // reset
     setCart([]);
     setShowCheckout(false);
     setName("");
@@ -149,16 +149,11 @@ export default function POS() {
     setOrderType("PICKUP");
   };
 
-  /* ================= UI ================= */
-
   return (
     <div className="max-w-md mx-auto h-screen flex flex-col bg-gray-50">
 
-      {/* HEADER */}
-      <div className="p-4 border-b bg-white sticky top-0 z-10">
-        <h1 className="text-lg font-bold">Awesome Achaar</h1>
-        <p className="text-xs text-gray-500">POS</p>
-      </div>
+      {/* 🔥 NAVIGATION */}
+      <Header />
 
       {/* PRODUCTS */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 pb-40">
@@ -189,13 +184,14 @@ export default function POS() {
         ))}
       </div>
 
-      {/* CART */}
+      {/* 🛒 CART */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t p-3">
+
         {cart.length > 0 && (
           <div className="max-h-32 overflow-y-auto mb-2">
             {cart.map((item) => (
-              <div key={item.id} className="flex justify-between mb-1">
-                <div className="text-sm">
+              <div key={item.id} className="flex justify-between mb-1 text-sm">
+                <div>
                   {item.name} ({item.size})
                 </div>
 
@@ -206,7 +202,9 @@ export default function POS() {
                   >
                     −
                   </button>
+
                   <span>{item.qty}</span>
+
                   <button
                     onClick={() => updateQty(item.id, 1)}
                     className="bg-gray-200 px-2 rounded"
@@ -232,7 +230,7 @@ export default function POS() {
         </div>
       </div>
 
-      {/* CHECKOUT */}
+      {/* 🧾 CHECKOUT */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/30 flex items-end">
           <div className="bg-white w-full max-w-md mx-auto p-4 rounded-t-2xl">
@@ -256,7 +254,7 @@ export default function POS() {
                   orderType === "DELIVERY" ? "bg-black text-white" : ""
                 }`}
               >
-                Home Delivery
+                Delivery
               </button>
             </div>
 
@@ -274,10 +272,9 @@ export default function POS() {
               onChange={(e) => setPhone(e.target.value)}
             />
 
-            {/* ADDRESS (ONLY DELIVERY) */}
             {orderType === "DELIVERY" && (
               <textarea
-                placeholder="Delivery Address"
+                placeholder="Address"
                 className="w-full border p-2 mb-2 rounded"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -297,9 +294,11 @@ export default function POS() {
             >
               Cancel
             </button>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }

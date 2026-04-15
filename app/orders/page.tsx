@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Header from "@/components/Header";
 
 /* ================= TYPES ================= */
 
@@ -34,7 +35,7 @@ type Order = {
 
 /* ================= CONSTANTS ================= */
 
-const STATUS: OrderStatus[] = [
+const STATUS_FLOW: OrderStatus[] = [
   "NEW",
   "PREPARING",
   "READY",
@@ -76,11 +77,7 @@ export default function OrdersPage() {
       .channel("orders-realtime")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-        },
+        { event: "*", schema: "public", table: "orders" },
         () => fetchOrders()
       )
       .subscribe();
@@ -90,38 +87,28 @@ export default function OrdersPage() {
     };
   }, []);
 
-  /* ================= STATUS ACTIONS ================= */
+  /* ================= ACTIONS ================= */
 
-  const goNext = async (order: Order) => {
-    if (order.status === "COMPLETED" || order.status === "CANCELLED") return;
+  const updateStatus = async (order: Order, direction: "NEXT" | "PREV") => {
+    if (order.status === "CANCELLED") return;
 
-    const index = STATUS.indexOf(order.status);
-    const next = STATUS[index + 1];
-    if (!next) return;
+    const index = STATUS_FLOW.indexOf(order.status);
+    let nextStatus: OrderStatus | undefined;
 
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: next })
-      .eq("id", order.id);
+    if (direction === "NEXT") {
+      nextStatus = STATUS_FLOW[index + 1];
+    } else {
+      nextStatus = STATUS_FLOW[index - 1];
+    }
 
-    if (!error) fetchOrders();
-    else console.error(error);
-  };
-
-  const goPrevious = async (order: Order) => {
-    if (order.status === "NEW" || order.status === "CANCELLED") return;
-
-    const index = STATUS.indexOf(order.status);
-    const prev = STATUS[index - 1];
-    if (!prev) return;
+    if (!nextStatus) return;
 
     const { error } = await supabase
       .from("orders")
-      .update({ status: prev })
+      .update({ status: nextStatus })
       .eq("id", order.id);
 
     if (!error) fetchOrders();
-    else console.error(error);
   };
 
   const cancelOrder = async (order: Order) => {
@@ -133,12 +120,11 @@ export default function OrdersPage() {
       .eq("id", order.id);
 
     if (!error) fetchOrders();
-    else console.error(error);
   };
 
   /* ================= FILTER ================= */
 
-  const filteredOrders =
+  const filtered =
     filter === "ALL"
       ? orders
       : orders.filter((o) => o.status === filter);
@@ -148,12 +134,13 @@ export default function OrdersPage() {
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50">
 
-      {/* HEADER */}
-      <div className="p-4 bg-white border-b sticky top-0 z-10">
-        <h1 className="text-lg font-bold">Orders</h1>
+      {/* 🔥 NAVIGATION */}
+      <Header />
 
-        <div className="flex gap-2 mt-2 overflow-x-auto">
-          {["ALL", ...STATUS, "CANCELLED"].map((s) => (
+      {/* FILTER BAR */}
+      <div className="p-3 bg-white border-b sticky top-[60px] z-10">
+        <div className="flex gap-2 overflow-x-auto">
+          {["ALL", ...STATUS_FLOW, "CANCELLED"].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s as any)}
@@ -169,63 +156,47 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* LIST */}
+      {/* ORDERS LIST */}
       <div className="p-3 space-y-3">
 
-        {filteredOrders.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-center text-gray-400 mt-10">
             No orders
           </p>
         )}
 
-        {filteredOrders.map((order) => (
+        {filtered.map((order) => (
           <div
             key={order.id}
             className="bg-white p-4 rounded-xl shadow-sm"
           >
-            {/* HEADER */}
-            <div className="flex justify-between items-start mb-2">
 
+            {/* TOP */}
+            <div className="flex justify-between mb-2">
               <div>
                 <p className="font-semibold text-sm">
                   #{order.id} • {order.name}
                 </p>
-
                 <p className="text-xs text-gray-400">
-                  📞 {order.phone}
+                  {order.phone}
                 </p>
               </div>
 
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${
-                  order.status === "NEW"
-                    ? "bg-blue-100 text-blue-600"
-                    : order.status === "PREPARING"
-                    ? "bg-yellow-100 text-yellow-600"
-                    : order.status === "READY"
-                    ? "bg-green-100 text-green-600"
-                    : order.status === "COMPLETED"
-                    ? "bg-gray-300 text-gray-700"
-                    : "bg-red-100 text-red-600"
-                }`}
-              >
+              <span className="text-xs px-2 py-1 rounded-full bg-gray-200">
                 {order.status}
               </span>
             </div>
 
-            {/* ORDER TYPE */}
-            <div className="text-xs text-gray-500 mb-2">
+            {/* TYPE */}
+            <p className="text-xs text-gray-500 mb-2">
               {order.type === "DELIVERY"
-                ? "🚚 Home Delivery"
+                ? "🚚 Delivery"
                 : "🛍 Pickup"}
-
-              {order.address && (
-                <span> • {order.address}</span>
-              )}
-            </div>
+              {order.address && ` • ${order.address}`}
+            </p>
 
             {/* ITEMS */}
-            <div className="mt-2 text-sm">
+            <div className="text-sm">
               {order.order_items?.map((item) => (
                 <p key={item.id}>
                   {item.qty}× {item.name}
@@ -238,30 +209,22 @@ export default function OrdersPage() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => goPrevious(order)}
-                  disabled={
-                    order.status === "NEW" ||
-                    order.status === "CANCELLED"
-                  }
-                  className="text-xs px-3 py-1 rounded-full bg-gray-200 disabled:opacity-40"
+                  onClick={() => updateStatus(order, "PREV")}
+                  className="text-xs px-3 py-1 bg-gray-200 rounded-full"
                 >
                   ← Prev
                 </button>
 
                 <button
-                  onClick={() => goNext(order)}
-                  disabled={
-                    order.status === "COMPLETED" ||
-                    order.status === "CANCELLED"
-                  }
-                  className="text-xs bg-black text-white px-3 py-1 rounded-full disabled:opacity-40"
+                  onClick={() => updateStatus(order, "NEXT")}
+                  className="text-xs px-3 py-1 bg-black text-white rounded-full"
                 >
                   Next →
                 </button>
               </div>
 
-              {order.status !== "CANCELLED" &&
-                order.status !== "COMPLETED" && (
+              {order.status !== "COMPLETED" &&
+                order.status !== "CANCELLED" && (
                   <button
                     onClick={() => cancelOrder(order)}
                     className="text-xs text-red-600"
@@ -270,6 +233,7 @@ export default function OrdersPage() {
                   </button>
                 )}
             </div>
+
           </div>
         ))}
       </div>
