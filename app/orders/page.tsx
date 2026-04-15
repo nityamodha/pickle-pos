@@ -3,35 +3,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
+import OrderCard, { type OrderCardData } from "@/components/OrderCard";
+import { type OrderStatus } from "@/lib/order-status";
 
 /* ================= TYPES ================= */
-
-type OrderItem = {
-  id: number;
-  order_id: number;
-  name: string;
-  qty: number;
-};
-
-type OrderStatus =
-  | "NEW"
-  | "PREPARING"
-  | "READY"
-  | "COMPLETED"
-  | "CANCELLED";
-
-type OrderType = "DELIVERY" | "PICKUP";
-
-type Order = {
-  id: number;
-  status: OrderStatus;
-  created_at: string;
-  name: string;
-  phone: string;
-  type: OrderType;
-  address: string | null;
-  order_items: OrderItem[];
-};
+type Order = OrderCardData;
 
 /* ================= CONSTANTS ================= */
 
@@ -40,6 +16,12 @@ const STATUS_FLOW: OrderStatus[] = [
   "PREPARING",
   "READY",
   "COMPLETED",
+];
+
+const FILTER_OPTIONS: Array<"ALL" | OrderStatus> = [
+  "ALL",
+  ...STATUS_FLOW,
+  "CANCELLED",
 ];
 
 /* ================= COMPONENT ================= */
@@ -67,7 +49,11 @@ export default function OrdersPage() {
   /* ================= INIT ================= */
 
   useEffect(() => {
-    fetchOrders();
+    const frame = requestAnimationFrame(() => {
+      void fetchOrders();
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   /* ================= REALTIME ================= */
@@ -132,18 +118,18 @@ export default function OrdersPage() {
   /* ================= UI ================= */
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gray-50">
+    <div className="w-full max-w-md mx-auto min-h-dvh bg-gray-50 overflow-x-hidden">
 
       {/* 🔥 NAVIGATION */}
       <Header />
 
       {/* FILTER BAR */}
-      <div className="p-3 bg-white border-b sticky top-[60px] z-10">
-        <div className="flex gap-2 overflow-x-auto">
-          {["ALL", ...STATUS_FLOW, "CANCELLED"].map((s) => (
+      <div className="sticky top-[60px] z-10 border-b bg-white p-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {FILTER_OPTIONS.map((s) => (
             <button
               key={s}
-              onClick={() => setFilter(s as any)}
+              onClick={() => setFilter(s)}
               className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                 filter === s
                   ? "bg-black text-white"
@@ -166,75 +152,17 @@ export default function OrdersPage() {
         )}
 
         {filtered.map((order) => (
-          <div
+          <OrderCard
             key={order.id}
-            className="bg-white p-4 rounded-xl shadow-sm"
-          >
-
-            {/* TOP */}
-            <div className="flex justify-between mb-2">
-              <div>
-                <p className="font-semibold text-sm">
-                  #{order.id} • {order.name}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {order.phone}
-                </p>
-              </div>
-
-              <span className="text-xs px-2 py-1 rounded-full bg-gray-200">
-                {order.status}
-              </span>
-            </div>
-
-            {/* TYPE */}
-            <p className="text-xs text-gray-500 mb-2">
-              {order.type === "DELIVERY"
-                ? "🚚 Delivery"
-                : "🛍 Pickup"}
-              {order.address && ` • ${order.address}`}
-            </p>
-
-            {/* ITEMS */}
-            <div className="text-sm">
-              {order.order_items?.map((item) => (
-                <p key={item.id}>
-                  {item.qty}× {item.name}
-                </p>
-              ))}
-            </div>
-
-            {/* ACTIONS */}
-            <div className="flex justify-between items-center mt-3">
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => updateStatus(order, "PREV")}
-                  className="text-xs px-3 py-1 bg-gray-200 rounded-full"
-                >
-                  ← Prev
-                </button>
-
-                <button
-                  onClick={() => updateStatus(order, "NEXT")}
-                  className="text-xs px-3 py-1 bg-black text-white rounded-full"
-                >
-                  Next →
-                </button>
-              </div>
-
-              {order.status !== "COMPLETED" &&
-                order.status !== "CANCELLED" && (
-                  <button
-                    onClick={() => cancelOrder(order)}
-                    className="text-xs text-red-600"
-                  >
-                    Cancel
-                  </button>
-                )}
-            </div>
-
-          </div>
+            order={order}
+            onPrevStatus={(currentOrder) =>
+              void updateStatus(currentOrder, "PREV")
+            }
+            onNextStatus={(currentOrder) =>
+              void updateStatus(currentOrder, "NEXT")
+            }
+            onCancel={(currentOrder) => void cancelOrder(currentOrder)}
+          />
         ))}
       </div>
     </div>

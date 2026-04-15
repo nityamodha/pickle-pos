@@ -150,13 +150,13 @@ export default function POSPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-screen flex flex-col bg-gray-50">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-x-hidden bg-gray-50">
 
       {/* 🔥 NAVIGATION */}
       <Header />
 
       {/* PRODUCTS */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 pb-40">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 pb-40">
         {PRODUCTS.map((product, index) => (
           <div key={index} className="bg-white rounded-xl p-3 shadow-sm">
             <h2 className="font-semibold mb-2">{product.name}</h2>
@@ -173,10 +173,10 @@ export default function POSPage() {
                       price: v.price,
                     })
                   }
-                  className="bg-gray-100 p-3 rounded-lg active:scale-95"
+                  className="rounded-lg bg-gray-100 p-3 active:scale-95"
                 >
                   <p className="text-xs">{v.size}</p>
-                  <p className="font-semibold text-sm">₹{v.price}</p>
+                  <p className="text-sm font-semibold">₹{v.price}</p>
                 </button>
               ))}
             </div>
@@ -185,17 +185,17 @@ export default function POSPage() {
       </div>
 
       {/* 🛒 CART */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t p-3">
+      <div className="fixed inset-x-0 bottom-0 mx-auto w-full max-w-md border-t bg-white p-3">
 
         {cart.length > 0 && (
           <div className="max-h-32 overflow-y-auto mb-2">
             {cart.map((item) => (
-              <div key={item.id} className="flex justify-between mb-1 text-sm">
-                <div>
+              <div key={item.id} className="mb-1 flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0 flex-1 break-words">
                   {item.name} ({item.size})
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     onClick={() => updateQty(item.id, -1)}
                     className="bg-gray-200 px-2 rounded"
@@ -217,7 +217,7 @@ export default function POSPage() {
           </div>
         )}
 
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between gap-3">
           <p className="font-bold">₹{total}</p>
 
           <button
@@ -233,7 +233,7 @@ export default function POSPage() {
       {/* 🧾 CHECKOUT */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/30 flex items-end">
-          <div className="bg-white w-full max-w-md mx-auto p-4 rounded-t-2xl">
+          <div className="mx-auto w-full max-w-md rounded-t-2xl bg-white p-4">
 
             <h2 className="font-bold mb-3">Checkout</h2>
 

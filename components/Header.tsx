@@ -14,7 +14,7 @@ export default function Header() {
     }`;
 
   return (
-    <div className="flex gap-2 p-4 border-b bg-white">
+    <div className="flex w-full gap-2 border-b bg-white p-4">
       <Link href="/pos" className={linkClass("/pos")}>
         POS
       </Link>
