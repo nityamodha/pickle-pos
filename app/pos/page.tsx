@@ -1,55 +1,82 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
+import ToastViewport, { type ToastMessage } from "@/components/ToastViewport";
 import Header from "@/components/Header";
-
-/* ================= TYPES ================= */
+import { supabase } from "@/lib/supabase";
 
 type CartItem = {
+  id: number;
+  product_name: string;
+  size: string;
+  unit_price: number;
+  qty: number;
+};
+
+type ProductRow = {
   id: number;
   name: string;
   size: string;
   price: number;
-  qty: number;
+  sort_order: number | null;
+  is_active: boolean | null;
+};
+
+type ProductGroup = {
+  name: string;
+  variants: Array<{
+    id: number;
+    size: string;
+    price: number;
+  }>;
 };
 
 type OrderType = "PICKUP" | "DELIVERY";
 
-/* ================= DATA ================= */
+function groupProducts(products: ProductRow[]): ProductGroup[] {
+  const groupedProducts = new Map<string, ProductGroup>();
 
-const PRODUCTS = [
-  {
-    name: "Punjabi Mix",
-    variants: [
-      { id: 1, size: "250g", price: 170 },
-      { id: 2, size: "500g", price: 325 },
-      { id: 3, size: "1kg", price: 650 },
-    ],
-  },
-  {
-    name: "Khati Gunda Keri",
-    variants: [
-      { id: 4, size: "250g", price: 170 },
-      { id: 5, size: "500g", price: 325 },
-      { id: 6, size: "1kg", price: 650 },
-    ],
-  },
-  {
-    name: "Chundo",
-    variants: [
-      { id: 7, size: "250g", price: 160 },
-      { id: 8, size: "500g", price: 300 },
-      { id: 9, size: "1kg", price: 600 },
-    ],
-  },
-];
+  for (const product of products) {
+    if (product.is_active === false) {
+      continue;
+    }
 
-/* ================= COMPONENT ================= */
+    const existing = groupedProducts.get(product.name);
+
+    if (existing) {
+      existing.variants.push({
+        id: product.id,
+        size: product.size,
+        price: product.price,
+      });
+      continue;
+    }
+
+    groupedProducts.set(product.name, {
+      name: product.name,
+      variants: [
+        {
+          id: product.id,
+          size: product.size,
+          price: product.price,
+        },
+      ],
+    });
+  }
+
+  return Array.from(groupedProducts.values()).map((product) => ({
+    ...product,
+    variants: product.variants.sort((a, b) => a.price - b.price),
+  }));
+}
 
 export default function POSPage() {
+  const [products, setProducts] = useState<ProductGroup[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -57,12 +84,72 @@ export default function POSPage() {
   const [address, setAddress] = useState("");
 
   const clickSound = useRef<HTMLAudioElement | null>(null);
+  const toastIdRef = useRef(0);
+
+  const pushToast = (
+    title: string,
+    description?: string,
+    tone: ToastMessage["tone"] = "info"
+  ) => {
+    const id = ++toastIdRef.current;
+
+    setToasts((prev) => [...prev, { id, title, description, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
 
   useEffect(() => {
     clickSound.current = new Audio("/sounds/click.wav");
   }, []);
 
-  /* 🛒 Add to cart */
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, size, price, sort_order, is_active")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Product catalog fetch error:", error);
+        pushToast(
+          "Catalog unavailable",
+          "We couldn’t load the product catalog from Supabase.",
+          "error"
+        );
+        setIsLoadingProducts(false);
+        return;
+      }
+
+      if ((data ?? []).length === 0) {
+        pushToast(
+          "Catalog is empty",
+          "Add products in Supabase to manage prices and sizes from the dashboard.",
+          "info"
+        );
+        setIsLoadingProducts(false);
+        return;
+      }
+
+      setProducts(groupProducts(data as ProductRow[]));
+      setIsLoadingProducts(false);
+    };
+
+    void fetchProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const addToCart = (product: Omit<CartItem, "qty">) => {
     clickSound.current?.play().catch(() => {});
 
@@ -81,7 +168,6 @@ export default function POSPage() {
     }
   };
 
-  /* 🔢 Update qty */
   const updateQty = (id: number, change: number) => {
     setCart((prev) =>
       prev
@@ -94,53 +180,12 @@ export default function POSPage() {
     );
   };
 
-  /* 💰 Total */
   const total = cart.reduce(
-    (sum, item) => sum + item.price * item.qty,
+    (sum, item) => sum + item.unit_price * item.qty,
     0
   );
 
-  /* 📦 Place Order */
-  const placeOrder = async () => {
-    if (!name || !phone || cart.length === 0) {
-      alert("Fill details");
-      return;
-    }
-
-    if (orderType === "DELIVERY" && !address) {
-      alert("Enter address");
-      return;
-    }
-
-    const { data: order, error } = await supabase
-      .from("orders")
-      .insert([
-        {
-          status: "NEW",
-          name,
-          phone,
-          type: orderType,
-          address: orderType === "DELIVERY" ? address : null,
-          total,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error || !order) {
-      alert("Order failed");
-      return;
-    }
-
-    const items = cart.map((item) => ({
-      order_id: order.id,
-      name: `${item.name} (${item.size})`,
-      qty: item.qty,
-    }));
-
-    await supabase.from("order_items").insert(items);
-
-    // reset
+  const resetCheckout = () => {
     setCart([]);
     setShowCheckout(false);
     setName("");
@@ -149,10 +194,73 @@ export default function POSPage() {
     setOrderType("PICKUP");
   };
 
+  const placeOrder = async () => {
+    if (!name.trim() || !phone.trim() || cart.length === 0) {
+      pushToast("Missing details", "Add customer details and at least one item before placing the order.", "error");
+      return;
+    }
+
+    if (orderType === "DELIVERY" && !address.trim()) {
+      pushToast("Address required", "Delivery orders need an address before you can continue.", "error");
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert([
+        {
+          status: "NEW",
+          name: name.trim(),
+          phone: phone.trim(),
+          type: orderType,
+          address: orderType === "DELIVERY" ? address.trim() : null,
+          total,
+        },
+      ])
+      .select()
+      .single();
+
+    if (orderError || !order) {
+      console.error("Order create error:", orderError);
+      pushToast("Order failed", "We couldn’t create the order. Please try again.", "error");
+      setIsPlacingOrder(false);
+      return;
+    }
+
+    const items = cart.map((item) => ({
+      order_id: order.id,
+      product_name: item.product_name,
+      size: item.size,
+      unit_price: item.unit_price,
+      qty: item.qty,
+      packed: false,
+    }));
+
+    const { error: itemError } = await supabase.from("order_items").insert(items);
+
+    if (itemError) {
+      console.error("Order item insert error:", itemError);
+      pushToast("Items failed to save", "The order was created, but the line items could not be saved cleanly.", "error");
+      setIsPlacingOrder(false);
+      return;
+    }
+
+    resetCheckout();
+    pushToast("Order placed", `${name.trim()}'s order is now live in the queue.`, "success");
+    setIsPlacingOrder(false);
+  };
+
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+      <ToastViewport
+        toasts={toasts}
+        onDismiss={(id) =>
+          setToasts((prev) => prev.filter((toast) => toast.id !== id))
+        }
+      />
 
-      {/* 🔥 NAVIGATION */}
       <Header
         title="POS Counter"
         subtitle="Create fast pickup and delivery orders from one screen."
@@ -169,7 +277,7 @@ export default function POSPage() {
                 Build the next order
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Tap any size below to add products instantly to the active cart.
+                Products now come from your Supabase catalog when available.
               </p>
             </div>
             <div className="rounded-2xl bg-slate-900 px-3 py-2 text-right text-white">
@@ -181,56 +289,72 @@ export default function POSPage() {
           </div>
         </section>
 
-        <section className="space-y-4">
-          {PRODUCTS.map((product, index) => (
-            <div
-              key={index}
-              className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
-            >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
-                    Product
-                  </p>
-                  <h2 className="mt-1 text-lg font-semibold text-slate-900">
-                    {product.name}
-                  </h2>
-                </div>
-                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                  3 sizes
+        {isLoadingProducts ? (
+          <section className="space-y-4">
+            {[1, 2, 3].map((placeholder) => (
+              <div
+                key={placeholder}
+                className="animate-pulse rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
+              >
+                <div className="h-5 w-1/3 rounded-full bg-slate-100" />
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {[1, 2, 3].map((cell) => (
+                    <div key={cell} className="h-20 rounded-2xl bg-slate-100" />
+                  ))}
                 </div>
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {product.variants.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() =>
-                      addToCart({
-                        id: v.id,
-                        name: product.name,
-                        size: v.size,
-                        price: v.price,
-                      })
-                    }
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition active:scale-95 hover:border-orange-200 hover:bg-orange-50"
-                  >
-                    <p className="text-xs font-medium text-slate-500">{v.size}</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">
-                      ₹{v.price}
+            ))}
+          </section>
+        ) : (
+          <section className="space-y-4">
+            {products.map((product) => (
+              <div
+                key={product.name}
+                className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
+              >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600">
+                      Product
                     </p>
-                  </button>
-                ))}
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                      {product.name}
+                    </h2>
+                  </div>
+                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    {product.variants.length} sizes
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() =>
+                        addToCart({
+                          id: variant.id,
+                          product_name: product.name,
+                          size: variant.size,
+                          unit_price: variant.price,
+                        })
+                      }
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition active:scale-95 hover:border-orange-200 hover:bg-orange-50"
+                    >
+                      <p className="text-xs font-medium text-slate-500">{variant.size}</p>
+                      <p className="mt-2 text-lg font-semibold text-slate-900">
+                        ₹{variant.price}
+                      </p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </section>
+            ))}
+          </section>
+        )}
       </div>
 
-      {/* 🛒 CART */}
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md px-4 pb-4">
         <div className="rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)] backdrop-blur">
-
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -256,10 +380,10 @@ export default function POSPage() {
                 >
                   <div className="min-w-0 flex-1 break-words">
                     <p className="font-medium text-slate-800">
-                      {item.name} ({item.size})
+                      {item.product_name} ({item.size})
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      ₹{item.price} each
+                      ₹{item.unit_price} each
                     </p>
                   </div>
 
@@ -296,11 +420,9 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* 🧾 CHECKOUT */}
       {showCheckout && (
         <div className="fixed inset-0 z-30 flex items-end bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-sm">
           <div className="mx-auto w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.45)]">
-
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
                 Checkout
@@ -310,7 +432,6 @@ export default function POSPage() {
               </h2>
             </div>
 
-            {/* ORDER TYPE */}
             <div className="mb-4 flex gap-2 rounded-full bg-slate-100 p-1">
               <button
                 onClick={() => setOrderType("PICKUP")}
@@ -359,10 +480,11 @@ export default function POSPage() {
             )}
 
             <button
-              onClick={placeOrder}
-              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              onClick={() => void placeOrder()}
+              disabled={isPlacingOrder}
+              className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Place Order ₹{total}
+              {isPlacingOrder ? "Placing Order..." : `Place Order ₹${total}`}
             </button>
 
             <button
@@ -371,11 +493,9 @@ export default function POSPage() {
             >
               Cancel
             </button>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }

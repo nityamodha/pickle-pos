@@ -1,9 +1,12 @@
 import { getStatusIcon, getStatusLabel, getStatusStyles, type OrderStatus } from "@/lib/order-status";
+import { formatOrderItemPrice, getOrderItemLabel } from "@/lib/order-items";
 
 type OrderItem = {
   id: number;
   order_id: number;
-  name: string;
+  product_name: string;
+  size: string;
+  unit_price: number | null;
   qty: number;
 };
 
@@ -70,7 +73,12 @@ export default function OrderCard({
         <div className="space-y-1 break-words text-sm text-slate-700">
         {order.order_items?.map((item) => (
           <p key={item.id}>
-            {item.qty}× {item.name}
+            {item.qty}× {getOrderItemLabel(item)}
+            {formatOrderItemPrice(item.unit_price, item.qty) && (
+              <span className="ml-2 text-xs text-slate-400">
+                {formatOrderItemPrice(item.unit_price, item.qty)}
+              </span>
+            )}
           </p>
         ))}
         </div>

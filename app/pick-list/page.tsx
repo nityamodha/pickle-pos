@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
+import ToastViewport, { type ToastMessage } from "@/components/ToastViewport";
 import Header from "@/components/Header";
+import { supabase } from "@/lib/supabase";
 
 type OrderStatus = "NEW" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
 
 type OrderItemRow = {
   id: number;
-  name: string;
+  product_name: string;
+  size: string;
   qty: number;
   packed: boolean;
 };
@@ -32,19 +34,6 @@ type PickListSummary = {
   totalItems: number;
 };
 
-function parseItemName(rawName: string): { name: string; size: string } {
-  const match = rawName.match(/^(.*)\s+\(([^()]+)\)$/);
-
-  if (!match) {
-    return { name: rawName, size: "Standard" };
-  }
-
-  return {
-    name: match[1],
-    size: match[2],
-  };
-}
-
 function aggregatePickList(orders: Order[]): {
   summary: PickListSummary;
   items: PickListItem[];
@@ -62,21 +51,19 @@ function aggregatePickList(orders: Order[]): {
         continue;
       }
 
-      const parsedItem = parseItemName(item.name);
-      const key = `${parsedItem.name}__${parsedItem.size}`;
-
+      const key = `${item.product_name}__${item.size}`;
       totalItems += item.qty;
 
-      const existingItem = groupedItems.get(key);
+      const existing = groupedItems.get(key);
 
-      if (existingItem) {
-        existingItem.qty += item.qty;
-        existingItem.itemIds.push(item.id);
+      if (existing) {
+        existing.qty += item.qty;
+        existing.itemIds.push(item.id);
       } else {
         groupedItems.set(key, {
           key,
-          name: parsedItem.name,
-          size: parsedItem.size,
+          name: item.product_name,
+          size: item.size,
           qty: item.qty,
           itemIds: [item.id],
         });
@@ -139,6 +126,21 @@ export default function PickListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [savingKeys, setSavingKeys] = useState<string[]>([]);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastIdRef = useRef(0);
+
+  const pushToast = (
+    title: string,
+    description?: string,
+    tone: ToastMessage["tone"] = "info"
+  ) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, title, description, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -148,7 +150,7 @@ export default function PickListPage() {
 
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status, order_items(id, name, qty, packed)")
+        .select("id, status, order_items(id, product_name, size, qty, packed)")
         .order("created_at", { ascending: false });
 
       if (!isMounted) {
@@ -194,7 +196,6 @@ export default function PickListPage() {
   }, []);
 
   const { summary, items } = aggregatePickList(orders);
-  const pickListItems = items;
 
   const handleMarkPacked = async (item: PickListItem) => {
     setSavingKeys((prev) => (prev.includes(item.key) ? prev : [...prev, item.key]));
@@ -207,19 +208,23 @@ export default function PickListPage() {
     if (error) {
       console.error("Mark packed error:", error);
       setHasError(true);
+      pushToast("Pack failed", `${item.name} (${item.size}) could not be marked as packed.`, "error");
+      setSavingKeys((prev) => prev.filter((key) => key !== item.key));
+      return;
     }
 
+    pushToast("Item packed", `${item.qty} units of ${item.name} (${item.size}) moved out of the live list.`, "success");
     setSavingKeys((prev) => prev.filter((key) => key !== item.key));
   };
 
   const handleMarkAllPacked = async () => {
-    const itemIds = pickListItems.flatMap((item) => item.itemIds);
+    const itemIds = items.flatMap((item) => item.itemIds);
 
     if (itemIds.length === 0) {
       return;
     }
 
-    setSavingKeys(pickListItems.map((item) => item.key));
+    setSavingKeys(items.map((item) => item.key));
 
     const { error } = await supabase
       .from("order_items")
@@ -229,13 +234,24 @@ export default function PickListPage() {
     if (error) {
       console.error("Mark all packed error:", error);
       setHasError(true);
+      pushToast("Bulk pack failed", "We couldn’t mark the whole pick list as packed.", "error");
+      setSavingKeys([]);
+      return;
     }
 
+    pushToast("Pick list cleared", `${itemIds.length} line items were marked as packed.`, "success");
     setSavingKeys([]);
   };
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+      <ToastViewport
+        toasts={toasts}
+        onDismiss={(id) =>
+          setToasts((prev) => prev.filter((toast) => toast.id !== id))
+        }
+      />
+
       <Header
         title="Pick List"
         subtitle="Items to pack from all new and preparing orders."
@@ -258,7 +274,7 @@ export default function PickListPage() {
 
             <button
               onClick={() => void handleMarkAllPacked()}
-              disabled={pickListItems.length === 0 || isLoading || savingKeys.length > 0}
+              disabled={items.length === 0 || isLoading || savingKeys.length > 0}
               className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingKeys.length > 0 ? "Saving..." : "Mark All Packed"}
@@ -267,16 +283,8 @@ export default function PickListPage() {
         </section>
 
         <section className="grid grid-cols-2 gap-4">
-          <SummaryCard
-            label="Total Orders"
-            value={summary.totalOrders}
-            tone="dark"
-          />
-          <SummaryCard
-            label="Total Items"
-            value={summary.totalItems}
-            tone="light"
-          />
+          <SummaryCard label="Total Orders" value={summary.totalOrders} tone="dark" />
+          <SummaryCard label="Total Items" value={summary.totalItems} tone="light" />
         </section>
 
         {isLoading ? (
@@ -301,7 +309,7 @@ export default function PickListPage() {
               We couldn&apos;t load the live pick list from Supabase.
             </p>
           </section>
-        ) : pickListItems.length === 0 ? (
+        ) : items.length === 0 ? (
           <section className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center shadow-sm">
             <p className="text-lg font-semibold text-slate-900">
               Nothing left to pack
@@ -312,7 +320,7 @@ export default function PickListPage() {
           </section>
         ) : (
           <section className="space-y-4 pb-6">
-            {pickListItems.map((item) => (
+            {items.map((item) => (
               <article
                 key={item.key}
                 className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"

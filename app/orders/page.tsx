@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
+import ToastViewport, { type ToastMessage } from "@/components/ToastViewport";
 import Header from "@/components/Header";
 import OrderCard, { type OrderCardData } from "@/components/OrderCard";
 import { type OrderStatus } from "@/lib/order-status";
+import { supabase } from "@/lib/supabase";
 
-/* ================= TYPES ================= */
 type Order = OrderCardData;
-
-/* ================= CONSTANTS ================= */
 
 const STATUS_FLOW: OrderStatus[] = [
   "NEW",
@@ -24,31 +22,45 @@ const FILTER_OPTIONS: Array<"ALL" | OrderStatus> = [
   "CANCELLED",
 ];
 
-/* ================= COMPONENT ================= */
+async function loadOrders() {
+  return supabase
+    .from("orders")
+    .select("*, order_items(id, order_id, product_name, size, unit_price, qty)")
+    .order("created_at", { ascending: false });
+}
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<"ALL" | OrderStatus>("ALL");
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastIdRef = useRef(0);
 
-  /* ================= FETCH ================= */
+  const pushToast = (
+    title: string,
+    description?: string,
+    tone: ToastMessage["tone"] = "info"
+  ) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, title, description, tone }]);
 
-  const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`*, order_items (*)`)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Fetch error:", error);
-      return;
-    }
-
-    setOrders(data || []);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
   };
 
-  /* ================= INIT ================= */
-
   useEffect(() => {
+    const fetchOrders = async () => {
+      const { data, error } = await loadOrders();
+
+      if (error) {
+        console.error("Fetch error:", error);
+        pushToast("Orders unavailable", "We couldn’t load the live queue right now.", "error");
+        return;
+      }
+
+      setOrders((data ?? []) as Order[]);
+    };
+
     const frame = requestAnimationFrame(() => {
       void fetchOrders();
     });
@@ -56,71 +68,108 @@ export default function OrdersPage() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  /* ================= REALTIME ================= */
-
   useEffect(() => {
-    const channel = supabase
+    const refreshOrders = async () => {
+      const { data, error } = await loadOrders();
+
+      if (error) {
+        console.error("Fetch error:", error);
+        return;
+      }
+
+      setOrders((data ?? []) as Order[]);
+    };
+
+    const ordersChannel = supabase
       .channel("orders-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        () => fetchOrders()
+        () => void refreshOrders()
+      )
+      .subscribe();
+
+    const itemsChannel = supabase
+      .channel("order-items-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        () => void refreshOrders()
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(itemsChannel);
     };
   }, []);
 
-  /* ================= ACTIONS ================= */
-
   const updateStatus = async (order: Order, direction: "NEXT" | "PREV") => {
-    if (order.status === "CANCELLED") return;
-
-    const index = STATUS_FLOW.indexOf(order.status);
-    let nextStatus: OrderStatus | undefined;
-
-    if (direction === "NEXT") {
-      nextStatus = STATUS_FLOW[index + 1];
-    } else {
-      nextStatus = STATUS_FLOW[index - 1];
+    if (order.status === "CANCELLED") {
+      return;
     }
 
-    if (!nextStatus) return;
+    const index = STATUS_FLOW.indexOf(order.status);
+    const nextStatus =
+      direction === "NEXT"
+        ? STATUS_FLOW[index + 1]
+        : STATUS_FLOW[index - 1];
+
+    if (!nextStatus) {
+      return;
+    }
 
     const { error } = await supabase
       .from("orders")
       .update({ status: nextStatus })
       .eq("id", order.id);
 
-    if (!error) fetchOrders();
+    if (error) {
+      console.error("Status update error:", error);
+      pushToast("Status update failed", `Order #${order.id} could not be moved to ${nextStatus}.`, "error");
+      return;
+    }
+
+    pushToast("Status updated", `Order #${order.id} is now ${nextStatus}.`, "success");
+    const { data } = await loadOrders();
+    setOrders((data ?? []) as Order[]);
   };
 
   const cancelOrder = async (order: Order) => {
-    if (order.status === "CANCELLED") return;
+    if (order.status === "CANCELLED") {
+      return;
+    }
 
     const { error } = await supabase
       .from("orders")
       .update({ status: "CANCELLED" })
       .eq("id", order.id);
 
-    if (!error) fetchOrders();
-  };
+    if (error) {
+      console.error("Cancel error:", error);
+      pushToast("Cancel failed", `Order #${order.id} could not be cancelled.`, "error");
+      return;
+    }
 
-  /* ================= FILTER ================= */
+    pushToast("Order cancelled", `Order #${order.id} was removed from the active queue.`, "success");
+    const { data } = await loadOrders();
+    setOrders((data ?? []) as Order[]);
+  };
 
   const filtered =
     filter === "ALL"
       ? orders
-      : orders.filter((o) => o.status === filter);
-
-  /* ================= UI ================= */
+      : orders.filter((order) => order.status === filter);
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+      <ToastViewport
+        toasts={toasts}
+        onDismiss={(id) =>
+          setToasts((prev) => prev.filter((toast) => toast.id !== id))
+        }
+      />
 
-      {/* 🔥 NAVIGATION */}
       <Header
         title="Orders Dashboard"
         subtitle="Track every order from incoming to completed."
@@ -153,17 +202,17 @@ export default function OrdersPage() {
 
         <section className="sticky top-[126px] z-10 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.45)] backdrop-blur">
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {FILTER_OPTIONS.map((s) => (
+            {FILTER_OPTIONS.map((status) => (
               <button
-                key={s}
-                onClick={() => setFilter(s)}
+                key={status}
+                onClick={() => setFilter(status)}
                 className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold tracking-wide transition ${
-                  filter === s
+                  filter === status
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
-                {s}
+                {status}
               </button>
             ))}
           </div>

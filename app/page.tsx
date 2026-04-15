@@ -18,14 +18,9 @@ type QuickAction = {
   icon: string;
 };
 
-type StatCard = {
-  label: string;
-  value: string;
-  change: string;
-};
-
 type OrderItemRow = {
-  name: string;
+  product_name: string;
+  size: string;
   qty: number;
 };
 
@@ -45,6 +40,12 @@ type RecentOrder = {
   orderType: LandingOrderType;
   amount: string;
   status: LandingOrderStatus;
+};
+
+type StatusCounter = {
+  label: string;
+  value: number;
+  tone: string;
 };
 
 type PopularPick = {
@@ -74,23 +75,38 @@ const quickActions: QuickAction[] = [
   },
 ];
 
-const EMPTY_STATS: StatCard[] = [
-  {
-    label: "Orders Today",
-    value: "0",
-    change: "No orders yet today",
-  },
-  {
-    label: "Revenue Today",
-    value: "₹0",
-    change: "Waiting for the first sale",
-  },
-  {
-    label: "Active Orders",
-    value: "0",
-    change: "Queue is currently clear",
-  },
-];
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getDateKey(date: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
+}
+
+function getRelativeAge(createdAt: string): string {
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  const minutes = Math.max(1, Math.floor(elapsedMs / 60000));
+
+  if (minutes < 60) {
+    return `${minutes} min waiting`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return remainingMinutes === 0
+    ? `${hours} hr waiting`
+    : `${hours} hr ${remainingMinutes} min waiting`;
+}
 
 function getStatusStyles(status: LandingOrderStatus): string {
   switch (status) {
@@ -109,74 +125,23 @@ function getStatusStyles(status: LandingOrderStatus): string {
   }
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function getDateKey(date: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(date));
-}
-
-function parseItemName(rawName: string): { name: string; size: string | null } {
-  const match = rawName.match(/^(.*)\s+\(([^()]+)\)$/);
-
-  if (!match) {
-    return { name: rawName, size: null };
-  }
-
-  return {
-    name: match[1],
-    size: match[2],
-  };
-}
-
 function buildDashboardData(orders: DashboardOrder[]) {
   const todayKey = getDateKey(new Date().toISOString());
   const todayOrders = orders.filter((order) => getDateKey(order.created_at) === todayKey);
-  const activeOrders = orders.filter(
-    (order) => order.status === "NEW" || order.status === "PREPARING" || order.status === "READY"
-  );
-  const readyOrders = activeOrders.filter((order) => order.status === "READY").length;
   const revenueToday = todayOrders.reduce(
     (sum, order) => sum + Number(order.total ?? 0),
     0
   );
-
-  const statsCards: StatCard[] = [
-    {
-      label: "Orders Today",
-      value: String(todayOrders.length),
-      change:
-        todayOrders.length > 0
-          ? `${todayOrders.filter((order) => order.status === "READY").length} ready to hand off`
-          : "No orders yet today",
-    },
-    {
-      label: "Revenue Today",
-      value: formatCurrency(revenueToday),
-      change:
-        revenueToday > 0
-          ? `${todayOrders.length} orders billed today`
-          : "Waiting for the first sale",
-    },
-    {
-      label: "Active Orders",
-      value: String(activeOrders.length),
-      change:
-        activeOrders.length > 0
-          ? `${readyOrders} ready for pickup`
-          : "Queue is currently clear",
-    },
+  const statusCounters: StatusCounter[] = [
+    { label: "NEW", value: orders.filter((order) => order.status === "NEW").length, tone: "bg-blue-50 text-blue-700" },
+    { label: "PREPARING", value: orders.filter((order) => order.status === "PREPARING").length, tone: "bg-orange-50 text-orange-700" },
+    { label: "READY", value: orders.filter((order) => order.status === "READY").length, tone: "bg-purple-50 text-purple-700" },
+    { label: "COMPLETED", value: orders.filter((order) => order.status === "COMPLETED").length, tone: "bg-emerald-50 text-emerald-700" },
   ];
+  const readyNow = orders.filter((order) => order.status === "READY").length;
+  const oldestWaiting = orders
+    .filter((order) => order.status === "NEW" || order.status === "PREPARING")
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
 
   const recentOrders: RecentOrder[] = orders.slice(0, 5).map((order) => ({
     id: `#${order.id}`,
@@ -190,12 +155,8 @@ function buildDashboardData(orders: DashboardOrder[]) {
 
   for (const order of todayOrders) {
     for (const item of order.order_items ?? []) {
-      const parsedItem = parseItemName(item.name);
-      const itemName = parsedItem.size
-        ? `${parsedItem.name} (${parsedItem.size})`
-        : parsedItem.name;
-
-      itemTotals.set(itemName, (itemTotals.get(itemName) ?? 0) + item.qty);
+      const key = `${item.product_name} (${item.size})`;
+      itemTotals.set(key, (itemTotals.get(key) ?? 0) + item.qty);
     }
   }
 
@@ -205,15 +166,18 @@ function buildDashboardData(orders: DashboardOrder[]) {
     .slice(0, 3)
     .map(([name, qty]) => ({
       name,
-      amount: `${qty} packed today`,
+      amount: `${qty} units today`,
       progress: topQty > 0 ? `${Math.max(20, Math.round((qty / topQty) * 100))}%` : "0%",
     }));
 
   return {
-    statsCards,
+    ordersToday: todayOrders.length,
+    revenueToday: formatCurrency(revenueToday),
+    readyNow,
+    oldestWaiting,
+    statusCounters,
     recentOrders,
     popularPicks,
-    queueCount: activeOrders.length,
   };
 }
 
@@ -228,7 +192,7 @@ async function getDashboardOrders(): Promise<DashboardOrder[]> {
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const { data, error } = await supabase
     .from("orders")
-    .select("id, created_at, name, type, total, status, order_items(name, qty)")
+    .select("id, created_at, name, type, total, status, order_items(product_name, size, qty)")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -285,10 +249,16 @@ function AppHeader() {
 }
 
 function Hero({
-  queueCount,
+  ordersToday,
+  revenueToday,
+  readyNow,
+  oldestWaiting,
   popularPicks,
 }: {
-  queueCount: number;
+  ordersToday: number;
+  revenueToday: string;
+  readyNow: number;
+  oldestWaiting?: DashboardOrder;
   popularPicks: PopularPick[];
 }) {
   return (
@@ -303,8 +273,29 @@ function Hero({
           Awesome Achaar POS
         </h2>
         <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-          Fast, simple POS for pickle & food businesses.
+          Faster order taking, clearer packing, and a sharper live queue for the team.
         </p>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-slate-900 p-4 text-white">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+              Orders Today
+            </p>
+            <p className="mt-2 text-2xl font-semibold">{ordersToday}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+              Revenue
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{revenueToday}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+              Ready Now
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{readyNow}</p>
+          </div>
+        </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
@@ -326,10 +317,10 @@ function Hero({
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              POS Preview
+              Queue Watch
             </p>
             <p className="text-sm font-semibold text-slate-900">
-              Counter View
+              Oldest Waiting Order
             </p>
           </div>
           <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -337,60 +328,86 @@ function Hero({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-slate-900 p-4 text-white">
+        <div className="rounded-3xl border border-slate-200 bg-white p-4">
+          {oldestWaiting ? (
+            <>
               <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-                Pick List
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
-                {popularPicks.length}
-              </p>
-              <p className="mt-1 text-sm text-slate-300">popular items today</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-                Queue
+                #{oldestWaiting.id} • {oldestWaiting.name}
               </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {queueCount}
+                {getRelativeAge(oldestWaiting.created_at)}
               </p>
-              <p className="mt-1 text-sm text-slate-500">orders in progress</p>
-            </div>
+              <p className="mt-1 text-sm text-slate-500">
+                {oldestWaiting.type === "PICKUP" ? "Pickup" : "Delivery"} order still in progress.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              No waiting orders right now. The queue is under control.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-900">
+              Popular Picks
+            </p>
+            <p className="text-xs text-slate-400">Today</p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
-                Popular Picks
+          <div className="space-y-3">
+            {popularPicks.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No items have been ordered yet today.
               </p>
-              <p className="text-xs text-slate-400">Today</p>
-            </div>
-
-            <div className="space-y-3">
-              {popularPicks.length === 0 ? (
-                <p className="text-sm text-slate-500">
-                  No items have been ordered yet today.
-                </p>
-              ) : (
-                popularPicks.map((item) => (
-                  <div key={item.name}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{item.name}</span>
-                      <span className="text-slate-500">{item.amount}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-amber-500"
-                        style={{ width: item.progress }}
-                      />
-                    </div>
+            ) : (
+              popularPicks.map((item) => (
+                <div key={item.name}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{item.name}</span>
+                    <span className="text-slate-500">{item.amount}</span>
                   </div>
-                ))
-              )}
-            </div>
+                  <div className="h-2 rounded-full bg-slate-100">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-amber-500"
+                      style={{ width: item.progress }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function StatusCounters({ counters }: { counters: StatusCounter[] }) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-xl font-semibold text-slate-900">Live Queue By Status</h3>
+        <p className="text-sm text-slate-500">
+          A quick operational read of where orders are sitting right now.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        {counters.map((counter) => (
+          <div
+            key={counter.label}
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <div className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${counter.tone}`}>
+              {counter.label}
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+              {counter.value}
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -431,36 +448,6 @@ function QuickActions() {
               </span>
             </span>
           </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function StatsCards({ statsCards }: { statsCards: StatCard[] }) {
-  return (
-    <section className="space-y-4">
-      <div>
-        <h3 className="text-xl font-semibold text-slate-900">Live Stats</h3>
-        <p className="text-sm text-slate-500">
-          A quick snapshot of today&apos;s performance.
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {statsCards.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
-              {stat.value}
-            </p>
-            <p className="mt-2 text-sm font-medium text-emerald-600">
-              {stat.change}
-            </p>
-          </div>
         ))}
       </div>
     </section>
@@ -553,26 +540,28 @@ function RecentOrders({ recentOrders }: { recentOrders: RecentOrder[] }) {
 export default async function Home() {
   const orders = await getDashboardOrders();
   const {
-    statsCards,
+    ordersToday,
+    revenueToday,
+    readyNow,
+    oldestWaiting,
+    statusCounters,
     recentOrders,
     popularPicks,
-    queueCount,
-  } = orders.length > 0
-    ? buildDashboardData(orders)
-    : {
-        statsCards: EMPTY_STATS,
-        recentOrders: [],
-        popularPicks: [],
-        queueCount: 0,
-      };
+  } = buildDashboardData(orders);
 
   return (
     <div className="min-h-dvh bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
       <AppHeader />
 
       <main className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <Hero queueCount={queueCount} popularPicks={popularPicks} />
-        <StatsCards statsCards={statsCards} />
+        <Hero
+          ordersToday={ordersToday}
+          revenueToday={revenueToday}
+          readyNow={readyNow}
+          oldestWaiting={oldestWaiting}
+          popularPicks={popularPicks}
+        />
+        <StatusCounters counters={statusCounters} />
         <QuickActions />
         <RecentOrders recentOrders={recentOrders} />
       </main>
