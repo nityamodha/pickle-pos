@@ -212,7 +212,7 @@ async function getDashboardOrders(): Promise<DashboardOrder[]> {
 
 function AppHeader() {
   return (
-    <header className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-white/45 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-600">
@@ -223,34 +223,34 @@ function AppHeader() {
           </h1>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-2 rounded-[24px] bg-slate-100 p-1">
+        <nav className="glass-panel-soft flex flex-wrap items-center gap-2 rounded-[24px] p-1">
           <Link
             href="/"
-            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm"
+            className="glass-button-primary rounded-full px-4 py-2 text-sm font-medium text-white"
           >
             Home
           </Link>
           <Link
             href="/pos"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+            className="glass-button-secondary rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
             POS
           </Link>
           <Link
             href="/orders"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+            className="glass-button-secondary rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
             Orders
           </Link>
           <Link
             href="/finance"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+            className="glass-button-secondary rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
             Finance
           </Link>
           <Link
             href="/pick-list"
-            className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-slate-900"
+            className="glass-button-secondary rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
             Pick List
           </Link>
@@ -275,33 +275,39 @@ function Hero({
 }) {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-      <div className="rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] sm:p-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+      <div className="glass-panel relative overflow-hidden rounded-[32px] p-6 sm:p-8">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-10 top-6 h-28 w-28 rounded-full bg-orange-200/35 blur-3xl" />
+          <div className="absolute right-6 top-10 h-20 w-20 rounded-full bg-sky-200/25 blur-3xl" />
+        </div>
+
+        <div className="relative">
+        <div className="glass-chip mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-orange-700">
           <span className="h-2 w-2 rounded-full bg-orange-500" />
           Live Operations
         </div>
 
-        <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-          Awesome Achaar POS
+        <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-[2.8rem] sm:leading-[1.05]">
+          Run the counter, queue, packing, and finance from one calm dashboard.
         </h2>
         <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-          Faster order taking, clearer packing, and a sharper live queue for the team.
+          Faster order taking, clearer packing, and a sharper live queue for the team without jumping between tools.
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-slate-900 p-4 text-white">
+          <div className="glass-button-primary rounded-2xl p-4 text-white">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
               Orders Today
             </p>
             <p className="mt-2 text-2xl font-semibold">{ordersToday}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="glass-panel-soft rounded-2xl p-4">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
               Revenue
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">{revenueToday}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="glass-panel-soft rounded-2xl p-4">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
               Ready Now
             </p>
@@ -312,20 +318,21 @@ function Hero({
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/pos"
-            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="glass-button-primary inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
           >
             Start New Order
           </Link>
           <Link
             href="/orders"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="glass-button-secondary inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-slate-700 transition hover:text-slate-900"
           >
             View Orders
           </Link>
         </div>
+        </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(251,146,60,0.18),_transparent_35%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-5 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)]">
+      <div className="glass-panel relative overflow-hidden rounded-[32px] p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -335,18 +342,18 @@ function Hero({
               Oldest Waiting Order
             </p>
           </div>
-          <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <div className="glass-chip rounded-full px-3 py-1 text-xs font-semibold text-emerald-700">
             Syncing Live
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-4">
+        <div className="glass-panel-soft rounded-3xl p-4">
           {oldestWaiting ? (
             <>
               <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
                 #{oldestWaiting.id} • {oldestWaiting.name}
               </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
                 {getRelativeAge(oldestWaiting.created_at)}
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -360,7 +367,7 @@ function Hero({
           )}
         </div>
 
-        <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+        <div className="glass-panel-soft mt-4 rounded-3xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900">
               Popular Picks
@@ -410,7 +417,7 @@ function StatusCounters({ counters }: { counters: StatusCounter[] }) {
         {counters.map((counter) => (
           <div
             key={counter.label}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="glass-panel-soft rounded-3xl p-6 transition duration-200 hover:-translate-y-1"
           >
             <div className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${counter.tone}`}>
               {counter.label}
@@ -442,9 +449,10 @@ function QuickActions() {
           <Link
             key={action.title}
             href={action.href}
-            className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_20px_40px_-30px_rgba(15,23,42,0.5)]"
+            className="glass-panel-soft group relative overflow-hidden rounded-3xl p-5 transition duration-200 hover:-translate-y-1"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-2xl text-white">
+            <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-white/25 blur-2xl transition duration-200 group-hover:scale-125" />
+            <div className="glass-button-primary flex h-12 w-12 items-center justify-center rounded-2xl text-2xl text-white">
               {action.icon}
             </div>
             <h4 className="mt-4 text-lg font-semibold text-slate-900">
@@ -484,8 +492,8 @@ function RecentOrders({ recentOrders }: { recentOrders: RecentOrder[] }) {
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="hidden grid-cols-[1.4fr_1fr_0.9fr_1fr] gap-4 border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:grid">
+      <div className="glass-panel overflow-hidden rounded-[32px]">
+        <div className="glass-panel-soft hidden grid-cols-[1.4fr_1fr_0.9fr_1fr] gap-4 border-b border-white/65 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:grid">
           <p>Customer</p>
           <p>Order Type</p>
           <p>Amount</p>
@@ -501,7 +509,7 @@ function RecentOrders({ recentOrders }: { recentOrders: RecentOrder[] }) {
             recentOrders.map((order) => (
               <div
                 key={order.id}
-                className="grid gap-4 px-4 py-4 sm:px-6 md:grid-cols-[1.4fr_1fr_0.9fr_1fr] md:items-center"
+                className="grid gap-4 px-4 py-4 transition duration-200 hover:bg-white/25 sm:px-6 md:grid-cols-[1.4fr_1fr_0.9fr_1fr] md:items-center"
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -562,7 +570,7 @@ export default async function Home() {
   } = buildDashboardData(orders);
 
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+    <div className="glass-page min-h-dvh">
       <AppHeader />
 
       <main className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

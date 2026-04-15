@@ -655,7 +655,7 @@ export default function FinancePage() {
   const emailSubject = `Awesome Achaar Finance Summary - ${getDateKey(new Date())}`;
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#ecfeff_0%,_#f8fafc_18%,_#f8fafc_100%)]">
+    <div className="glass-page min-h-dvh overflow-x-hidden">
       <ToastViewport
         toasts={toasts}
         onDismiss={(id) =>
@@ -670,7 +670,7 @@ export default function FinancePage() {
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5">
         <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.35)]">
+          <div className="glass-panel rounded-[28px] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
               Ready To Close
             </p>
@@ -678,7 +678,7 @@ export default function FinancePage() {
             <p className="mt-1 text-sm text-slate-500">Orders waiting for finance confirmation.</p>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.35)]">
+          <div className="glass-panel rounded-[28px] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               Lifetime Collected
             </p>
@@ -705,7 +705,7 @@ export default function FinancePage() {
           </div>
 
           {metrics.activeOrders.length === 0 ? (
-            <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-10 text-center shadow-sm">
+            <div className="glass-panel-soft rounded-[28px] border border-dashed border-white/70 px-6 py-10 text-center">
               <p className="text-lg font-semibold text-slate-900">No finance orders yet</p>
               <p className="mt-2 text-sm text-slate-500">
                 Orders moved to READY or COMPLETED will appear here.
@@ -720,10 +720,7 @@ export default function FinancePage() {
               const statusLabel = getStatusLabel(order.status);
 
               return (
-                <div
-                  key={order.id}
-                  className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
-                >
+                <div key={order.id} className="glass-panel rounded-[28px] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">
@@ -755,7 +752,7 @@ export default function FinancePage() {
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Order Total
                       </p>
@@ -763,7 +760,7 @@ export default function FinancePage() {
                         {formatCurrency(order.totalAmount)}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Received
                       </p>
@@ -771,7 +768,7 @@ export default function FinancePage() {
                         {formatCurrency(order.totalReceived)}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Balance
                       </p>
@@ -793,7 +790,7 @@ export default function FinancePage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-slate-50 p-3">
+                  <div className="glass-panel-soft mt-4 rounded-2xl p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Items
@@ -848,14 +845,14 @@ export default function FinancePage() {
                           current === order.id ? null : order.id
                         )
                       }
-                      className="rounded-full bg-slate-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+                      className="glass-button-primary rounded-full px-3 py-2 text-xs font-medium text-white transition hover:brightness-110"
                     >
                       {isExpanded ? "Hide details" : "Manage payment"}
                     </button>
                   </div>
 
                   {isExpanded && (
-                    <div className="mt-4 space-y-4 rounded-3xl border border-cyan-100 bg-cyan-50/70 p-4">
+                    <div className="glass-panel-soft mt-4 space-y-4 rounded-3xl p-4">
                       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                         <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                           Updated By
@@ -864,7 +861,7 @@ export default function FinancePage() {
                             onChange={(event) =>
                               updateDraftActor(order.id, event.target.value as PaymentActor)
                             }
-                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-400"
+                            className="glass-chip rounded-2xl px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-300"
                           >
                             {PAYMENT_ACTORS.map((actor) => (
                               <option key={actor} value={actor}>
@@ -876,7 +873,7 @@ export default function FinancePage() {
 
                         <button
                           onClick={() => addDraftLine(order)}
-                          className="mt-auto rounded-full bg-white px-4 py-3 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                          className="glass-button-secondary mt-auto rounded-full px-4 py-3 text-sm font-semibold text-slate-700 transition hover:text-slate-900"
                         >
                           Add split payment
                         </button>
@@ -886,7 +883,7 @@ export default function FinancePage() {
                         {draft.lines.map((line, index) => (
                           <div
                             key={line.localId}
-                            className="rounded-3xl border border-white/70 bg-white p-4 shadow-sm"
+                            className="glass-panel-soft rounded-3xl p-4"
                           >
                             <div className="mb-3 flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-slate-900">
@@ -914,7 +911,7 @@ export default function FinancePage() {
                                     )
                                   }
                                   inputMode="decimal"
-                                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-400"
+                                  className="glass-chip rounded-2xl px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-300"
                                 />
                               </label>
 
@@ -930,7 +927,7 @@ export default function FinancePage() {
                                       event.target.value as PaymentEntryMethod
                                     )
                                   }
-                                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-400"
+                                  className="glass-chip rounded-2xl px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-300"
                                 >
                                   {PAYMENT_ENTRY_METHODS.map((method) => (
                                     <option key={method} value={method}>
@@ -952,7 +949,7 @@ export default function FinancePage() {
                                       event.target.value as PaymentActor
                                     )
                                   }
-                                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-400"
+                                  className="glass-chip rounded-2xl px-3 py-3 text-sm font-medium normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-300"
                                 >
                                   {PAYMENT_ACTORS.map((receiver) => (
                                     <option key={receiver} value={receiver}>
@@ -976,7 +973,7 @@ export default function FinancePage() {
                                   )
                                 }
                                 placeholder="Example: Rs200 online from son, Rs150 cash at pickup"
-                                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-400"
+                                className="glass-chip rounded-2xl px-3 py-3 text-sm normal-case tracking-normal text-slate-900 outline-none transition focus:border-cyan-300"
                               />
                             </label>
                           </div>
@@ -986,7 +983,7 @@ export default function FinancePage() {
                       <button
                         onClick={() => void savePayments(order)}
                         disabled={isSavingOrderId === order.id}
-                        className="w-full rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-cyan-300"
+                        className="glass-button-primary w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isSavingOrderId === order.id
                           ? "Saving..."
@@ -995,7 +992,7 @@ export default function FinancePage() {
                             : "Update payment details"}
                       </button>
 
-                      <div className="rounded-3xl bg-white p-4">
+                      <div className="glass-panel-soft rounded-3xl p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                           Edit History
                         </p>
@@ -1006,7 +1003,7 @@ export default function FinancePage() {
                             </p>
                           ) : (
                             order.audit_log.slice(0, 5).map((entry) => (
-                              <div key={entry.id} className="rounded-2xl bg-slate-50 p-3">
+                              <div key={entry.id} className="glass-chip rounded-2xl p-3">
                                 <p className="text-sm font-medium text-slate-900">
                                   {entry.summary}
                                 </p>
@@ -1074,7 +1071,7 @@ export default function FinancePage() {
 
           <div className="space-y-3">
             {metrics.completedOrders.length === 0 ? (
-              <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-10 text-center shadow-sm">
+              <div className="glass-panel-soft rounded-[28px] border border-dashed border-white/70 px-6 py-10 text-center">
                 <p className="text-lg font-semibold text-slate-900">No completed orders yet</p>
                 <p className="mt-2 text-sm text-slate-500">
                   Completed orders will show settlement gaps here.
@@ -1082,10 +1079,7 @@ export default function FinancePage() {
               </div>
             ) : (
               metrics.completedOrders.map((order) => (
-                <div
-                  key={`reconciliation-${order.id}`}
-                  className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.35)]"
-                >
+                <div key={`reconciliation-${order.id}`} className="glass-panel rounded-[28px] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
@@ -1105,7 +1099,7 @@ export default function FinancePage() {
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Billed
                       </p>
@@ -1113,7 +1107,7 @@ export default function FinancePage() {
                         {formatCurrency(order.totalAmount)}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Received
                       </p>
@@ -1121,7 +1115,7 @@ export default function FinancePage() {
                         {formatCurrency(order.totalReceived)}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="glass-panel-soft rounded-2xl p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Difference
                       </p>
@@ -1140,7 +1134,7 @@ export default function FinancePage() {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-34px_rgba(15,23,42,0.45)]">
+        <section className="glass-panel rounded-[28px] p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
@@ -1153,7 +1147,7 @@ export default function FinancePage() {
                 Open an email draft or copy the summary for WhatsApp, Gmail, or your reporting workflow.
               </p>
             </div>
-            <div className="rounded-2xl bg-orange-50 px-3 py-2 text-right">
+            <div className="glass-chip rounded-2xl px-3 py-2 text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700">
                 To
               </p>
@@ -1166,19 +1160,19 @@ export default function FinancePage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => openMailDraft(emailSubject, emailBody)}
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="glass-button-primary rounded-full px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
             >
               Open Email Draft
             </button>
             <button
               onClick={() => void copyEmailSummary(emailBody)}
-              className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+              className="glass-button-secondary rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:text-slate-900"
             >
               Copy Summary
             </button>
           </div>
 
-          <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
+          <pre className="mt-4 overflow-x-auto rounded-3xl bg-slate-950/90 p-4 text-xs leading-6 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
             {emailBody}
           </pre>
         </section>

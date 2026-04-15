@@ -168,7 +168,7 @@ export default function OrdersPage() {
       : orders.filter((order) => order.status === filter);
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+    <div className="glass-page min-h-dvh overflow-x-hidden">
       <ToastViewport
         toasts={toasts}
         onDismiss={(id) =>
@@ -182,7 +182,7 @@ export default function OrdersPage() {
       />
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.45)]">
+        <section className="glass-panel rounded-[28px] p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
@@ -195,7 +195,7 @@ export default function OrdersPage() {
                 Filter by status and move orders forward as the kitchen updates.
               </p>
             </div>
-            <div className="rounded-2xl bg-orange-50 px-3 py-2 text-right">
+            <div className="glass-chip rounded-2xl px-3 py-2 text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-600">
                 Showing
               </p>
@@ -206,7 +206,7 @@ export default function OrdersPage() {
           </div>
         </section>
 
-        <section className="sticky top-[126px] z-10 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.45)] backdrop-blur">
+        <section className="glass-panel sticky top-[126px] z-10 rounded-[24px] p-3">
           <div className="flex gap-2 overflow-x-auto pb-1">
             {FILTER_OPTIONS.map((status) => (
               <button
@@ -214,8 +214,8 @@ export default function OrdersPage() {
                 onClick={() => setFilter(status)}
                 className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold tracking-wide transition ${
                   filter === status
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                    ? "glass-button-primary text-white"
+                    : "glass-button-secondary text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {status}
@@ -226,7 +226,7 @@ export default function OrdersPage() {
 
         <section className="space-y-4 pb-6">
           {filtered.length === 0 && (
-            <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center shadow-sm">
+            <div className="glass-panel-soft rounded-[28px] border border-dashed border-white/70 px-6 py-12 text-center">
               <p className="text-lg font-semibold text-slate-900">No orders</p>
               <p className="mt-2 text-sm text-slate-500">
                 New orders will appear here as they come in.

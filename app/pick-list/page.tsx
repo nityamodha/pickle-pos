@@ -103,10 +103,10 @@ function SummaryCard({
 }) {
   return (
     <div
-      className={`rounded-[24px] p-4 shadow-sm ${
+      className={`rounded-[24px] p-4 ${
         tone === "dark"
-          ? "bg-slate-900 text-white"
-          : "border border-slate-200 bg-white text-slate-900"
+          ? "glass-button-primary text-white"
+          : "glass-panel-soft text-slate-900"
       }`}
     >
       <p
@@ -244,7 +244,7 @@ export default function PickListPage() {
   };
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,_#fff7ed_0%,_#f8fafc_22%,_#f8fafc_100%)]">
+    <div className="glass-page min-h-dvh overflow-x-hidden">
       <ToastViewport
         toasts={toasts}
         onDismiss={(id) =>
@@ -258,7 +258,7 @@ export default function PickListPage() {
       />
 
       <main className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-5">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.45)]">
+        <section className="glass-panel rounded-[28px] p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
@@ -275,7 +275,7 @@ export default function PickListPage() {
             <button
               onClick={() => void handleMarkAllPacked()}
               disabled={items.length === 0 || isLoading || savingKeys.length > 0}
-              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="glass-button-primary rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingKeys.length > 0 ? "Saving..." : "Mark All Packed"}
             </button>
@@ -292,16 +292,16 @@ export default function PickListPage() {
             {[1, 2, 3].map((placeholder) => (
               <div
                 key={placeholder}
-                className="animate-pulse rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
+                className="glass-panel animate-pulse rounded-[28px] p-5"
               >
-                <div className="h-5 w-2/3 rounded-full bg-slate-100" />
-                <div className="mt-3 h-10 w-24 rounded-2xl bg-slate-100" />
-                <div className="mt-4 h-12 rounded-2xl bg-slate-100" />
+                <div className="h-5 w-2/3 rounded-full bg-white/70" />
+                <div className="mt-3 h-10 w-24 rounded-2xl bg-white/70" />
+                <div className="mt-4 h-12 rounded-2xl bg-white/70" />
               </div>
             ))}
           </section>
         ) : hasError ? (
-          <section className="rounded-[28px] border border-dashed border-red-200 bg-white/80 px-6 py-12 text-center shadow-sm">
+          <section className="glass-panel-soft rounded-[28px] border border-dashed border-white/70 px-6 py-12 text-center">
             <p className="text-lg font-semibold text-slate-900">
               Pick list unavailable
             </p>
@@ -310,7 +310,7 @@ export default function PickListPage() {
             </p>
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center shadow-sm">
+          <section className="glass-panel-soft rounded-[28px] border border-dashed border-white/70 px-6 py-12 text-center">
             <p className="text-lg font-semibold text-slate-900">
               Nothing left to pack
             </p>
@@ -323,7 +323,7 @@ export default function PickListPage() {
             {items.map((item) => (
               <article
                 key={item.key}
-                className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_20px_40px_-32px_rgba(15,23,42,0.45)]"
+                className="glass-panel rounded-[28px] p-5"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

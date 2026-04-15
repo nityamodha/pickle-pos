@@ -14,12 +14,12 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const linkClass = (path: string) =>
     `rounded-full px-4 py-2 text-sm font-medium transition ${
       pathname === path
-        ? "bg-slate-900 text-white shadow-sm"
-        : "text-slate-600 hover:bg-white hover:text-slate-900"
+        ? "glass-button-primary text-white"
+        : "glass-button-secondary text-slate-600 hover:text-slate-900"
     }`;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-white/45 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -34,14 +34,14 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
           <Link
             href="/"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            className="glass-button-secondary inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
           >
             <span aria-hidden="true">←</span>
             <span>Home</span>
           </Link>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-2 rounded-[24px] bg-slate-100 p-1">
+        <nav className="glass-panel-soft flex flex-wrap items-center gap-2 rounded-[24px] p-1">
           <Link href="/pos" className={linkClass("/pos")}>
             POS
           </Link>
